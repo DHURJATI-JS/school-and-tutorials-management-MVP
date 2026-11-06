@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block body_class %}cn-public{% endblock %}
+{% block body %}
+<nav class="cn-pnav" aria-label="Site">
+  <div class="container">
+    <a class="cn-brand" href="/">
+      {% if site.logo_url %}<img src="{{ site.logo_url }}" alt="">{% else %}<span class="cn-logo-mark"><i class="fa-solid fa-feather-pointed"></i></span>{% endif %}
+      <span>{{ site.site_name }}</span>
+    </a>
+    <div class="cn-pnav-links">
+      <a class="link" href="/#features">Features</a>
+      <a class="link" href="/#faq">FAQ</a>
+      <a class="link" href="/#contact">Contact</a>
+      <button class="cn-icon-btn" type="button" data-theme-toggle aria-label="Toggle light / dark mode"><i class="fa-solid fa-moon"></i></button>
+      {% if user and user.kind != "guest" %}
+      <a class="btn btn-primary" href="{{ user.home_url }}">Open dashboard</a>
+      {% else %}
+      <a class="btn btn-primary" href="/login"><i class="fa-solid fa-right-to-bracket me-2"></i>Sign in</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+<main id="main">{% block content %}{% endblock %}</main>
+<footer class="cn-footer">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-md-5">
+        <div class="cn-brand p-0 mb-2"><span class="cn-logo-mark"><i class="fa-solid fa-feather-pointed"></i></span><span>{{ site.site_name }}</span></div>
+        <p class="small mb-2">{{ site.footer_text }}</p>
+        <div class="d-flex gap-2">
+          {% for key, icon in [("facebook", "fa-facebook-f"), ("instagram", "fa-instagram"), ("youtube", "fa-youtube"), ("linkedin", "fa-linkedin-in")] %}
+          {% if site[key] %}<a class="cn-icon-btn" href="{{ site[key] }}" target="_blank" rel="noopener" aria-label="{{ key }}"><i class="fa-brands {{ icon }}"></i></a>{% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="small-caps mb-2">Pages</div>
+        {% for p in footer_pages %}<div class="mb-1"><a href="/p/{{ p.slug }}">{{ p.title }}</a></div>{% endfor %}
+      </div>
+      <div class="col-md-4">
+        <div class="small-caps mb-2">Contact</div>
+        <div class="mb-1"><i class="fa-solid fa-envelope me-2"></i><a href="mailto:{{ site.contact_email }}">{{ site.contact_email }}</a></div>
+        <div class="mb-1"><i class="fa-brands fa-whatsapp me-2"></i><a href="{{ site.whatsapp_link }}" target="_blank" rel="noopener">{{ site.contact_whatsapp }}</a></div>
+        <div class="mb-1"><i class="fa-solid fa-location-dot me-2"></i>{{ site.contact_address }}</div>
+      </div>
+    </div>
+    <hr class="my-4">
+    <div class="d-flex flex-wrap justify-content-between gap-2 small">
+      <span>© {{ now().year }} {{ site.site_name }}. Student-grade project — provided as is, without warranty. <a href="/p/terms">Terms</a></span>
+      <span>Powered by a private, local AI.</span>
+    </div>
+  </div>
+</footer>
+<a class="cn-wa-fab" href="{{ site.whatsapp_link }}" target="_blank" rel="noopener" aria-label="Chat on WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+{% endblock %}

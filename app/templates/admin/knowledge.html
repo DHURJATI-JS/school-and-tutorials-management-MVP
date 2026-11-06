@@ -1,0 +1,53 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Knowledge base{% endblock %}
+{% block content %}
+{% call ui.page_header("Knowledge base", "Notes, PDFs and images indexed with pgvector. Used for AI tests and the AI doubt solver.", "fa-brain") %}
+  <form method="post" action="/admin/knowledge/reindex" data-confirm="Re-index everything? This can take a while on a local model." data-confirm-tone="primary">{{ csrf_field() }}<button class="btn btn-ghost" type="submit"><i class="fa-solid fa-rotate me-2"></i>Re-index all</button></form>
+  <button class="btn btn-primary" type="button" data-modal-open="#upload-modal"><i class="fa-solid fa-upload me-2"></i>Add material</button>
+{% endcall %}
+<div class="cn-grid cols-4 mb-4">
+  {{ ui.stat("Material chunks", stats.get("material", 0), "fa-file-lines", "primary") }}
+  {{ ui.stat("Class-note chunks", stats.get("meeting", 0), "fa-video", "info") }}
+  {{ ui.stat("Video-note chunks", stats.get("video", 0), "fa-film", "accent") }}
+  {{ ui.stat("Semantic vectors", semantic, "fa-diagram-project", "violet", hint="Lexical vectors are always on; semantic needs EMBEDDING_MODEL") }}
+</div>
+<div class="cn-grid" style="grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr)">
+  <div class="cn-card flush">
+    <div class="cn-card-head"><h3>Materials</h3></div>
+    {% if materials %}<div class="cn-table-wrap mt-2"><table class="cn-table"><thead><tr><th>Title</th><th>Scope</th><th class="num">Chunks</th><th>Status</th><th></th></tr></thead><tbody>
+      {% for m in materials %}<tr><td><div class="fw-bold">{{ m.title }}</div><div class="small text-muted">{{ m.original_name }} · {{ m.size_bytes|filesize }}</div></td>
+        <td class="small">{{ m.batch.name if m.batch else ((m.class_level or "All classes") ~ " · " ~ (m.subject or "All subjects")) }}</td>
+        <td class="num">{{ m.chunks }}</td><td>{{ ui.status(m.status) }}{% if m.error %}<div class="small text-danger">{{ m.error }}</div>{% endif %}</td>
+        <td><div class="cn-actions">{% if m.file_path %}<a class="btn btn-ghost btn-sm" href="/files/material/{{ m.id }}" target="_blank" rel="noopener"><i class="fa-solid fa-eye"></i></a>{% endif %}
+          <form method="post" action="/admin/knowledge/{{ m.id }}/delete" data-confirm="Remove this material from the knowledge base?">{{ csrf_field() }}<button class="btn btn-soft-danger btn-sm" type="submit"><i class="fa-solid fa-trash-can"></i></button></form></div></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}{{ ui.empty("fa-file-circle-plus", "No materials yet", "Upload chapter notes or PDFs so AI tests and answers match what you teach.") }}{% endif %}
+  </div>
+  <div class="cn-card">
+    <h3 class="h6">Test retrieval</h3>
+    <form method="get" class="d-flex flex-column gap-2 mb-3">
+      <select class="form-select" name="batch"><option value="0">Any batch</option>{% for b in batches %}<option value="{{ b.id }}" {{ 'selected' if b.id == batch }}>{{ b.name }}</option>{% endfor %}</select>
+      <div class="d-flex gap-2"><input class="form-control" name="q" value="{{ q }}" placeholder="Ask something…"><button class="btn btn-soft" type="submit" data-allow-resubmit><i class="fa-solid fa-magnifying-glass"></i></button></div>
+    </form>
+    {% for h in hits %}<div class="py-2 border-bottom small"><div class="d-flex justify-content-between"><strong>{{ h.title }}</strong><span class="cn-badge neutral">{{ h.source_type }}</span></div>
+      <div class="text-muted mt-1">{{ h.content[:260] }}…</div></div>
+    {% else %}{% if q %}<p class="text-muted small">No matching chunks.</p>{% else %}<p class="text-muted small mb-0">Search to see which chunks the AI would read (hybrid lexical + semantic, reciprocal-rank fused).</p>{% endif %}{% endfor %}
+  </div>
+</div>
+{% call ui.modal("upload-modal", "Add study material", "lg") %}
+<form method="post" action="/admin/knowledge/upload" enctype="multipart/form-data">
+  {{ csrf_field() }}
+  <div class="cn-modal-body cn-form-grid">
+    {{ ui.field("title", "Title", required=True, cls="span-2", placeholder="e.g. Chapter 4 — Carbon and its compounds") }}
+    <div class="cn-field"><label class="form-label">Batch (optional)</label><select class="form-select" name="batch_id"><option value="0">Shared by class & subject</option>{% for b in batches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select></div>
+    {{ ui.select("class_level", "Class (if not batch-specific)", C.CLASS_LEVELS, empty_label="Any") }}
+    {{ ui.field("subject", "Subject (if not batch-specific)", cls="span-2") }}
+    <div class="cn-field span-2"><label class="form-label">File (PDF, TXT, MD or an image — images are read with Tesseract OCR)</label>
+      <input class="form-control" type="file" name="file" accept=".pdf,.txt,.md,image/png,image/jpeg,image/webp"></div>
+    {{ ui.textarea("text", "…or paste notes", rows=5, cls="span-2") }}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit" data-loading="Uploading…">Add to knowledge base</button></div>
+</form>
+{% endcall %}
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Result · {{ test.title }}{% endblock %}
+{% block content %}
+{% call ui.page_header(test.title, "Submitted " ~ (attempt.submitted_at|dt), "fa-square-poll-vertical") %}
+  <a class="btn btn-ghost" href="/student/tasks"><i class="fa-solid fa-arrow-left me-2"></i>Tasks</a>
+{% endcall %}
+{% if attempt.status != "graded" %}
+<div class="cn-card text-center py-5" data-attempt-status="/student/attempts/{{ attempt.id }}/status">
+  <div class="cn-empty-icon mx-auto mb-3"><i class="fa-solid fa-hourglass-half"></i></div>
+  <h3>Grading your answers…</h3><p class="text-muted mb-0">This page updates automatically.</p>
+</div>
+{% else %}
+<div class="cn-grid" style="grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr)">
+  <div class="cn-card text-center">
+    <div class="cn-score-ring" style="--p: {{ attempt.percent or 0 }}"><div><strong>{{ (attempt.percent or 0)|num }}%</strong><span class="small text-muted">{{ attempt.score|num }} / {{ attempt.max_score|num }}</span></div></div>
+    {% if attempt.feedback %}<div class="cn-callout success mt-4 text-start"><i class="fa-solid fa-wand-magic-sparkles"></i><div>{{ attempt.feedback }}</div></div>{% endif %}
+    {% if attempt.grading_note %}<p class="small text-muted mb-0">{{ attempt.grading_note }}</p>{% endif %}
+    <a class="btn btn-soft mt-3" href="/student/tutor"><i class="fa-solid fa-robot me-2"></i>Ask the AI about mistakes</a>
+  </div>
+  <div>
+    {% if test.show_results %}
+    {% for q in test.questions %}{% set r = attempt.per_question.get(q.id|string, {}) %}
+    <div class="cn-q">
+      <div class="d-flex justify-content-between"><span class="cn-q-num">Question {{ loop.index }}</span>
+        <span class="small fw-bold {{ 'text-success' if r.get('correct') else 'text-danger' }}">{{ r.get("awarded", 0)|num }} / {{ q.marks|num }}</span></div>
+      <div class="cn-q-text">{{ q.text }}</div>
+      {% if q.kind in ("mcq", "true_false") %}
+        {% set opts = q.options if q.kind == "mcq" else ["True", "False"] %}
+        {% for opt in opts %}{% set val = loop.index0|string if q.kind == "mcq" else opt|lower %}
+        <div class="cn-option {{ 'correct' if val == q.answer else ('wrong' if val == r.get('given') else '') }}">
+          <i class="fa-solid {{ 'fa-circle-check text-success' if val == q.answer else ('fa-circle-xmark text-danger' if val == r.get('given') else 'fa-circle text-muted') }}"></i><span>{{ opt }}</span></div>{% endfor %}
+      {% else %}
+        <div class="small"><div class="small-caps">Your answer</div><p>{{ r.get("given") or "—" }}</p>
+          <div class="small-caps">Model answer</div><p>{{ q.answer }}</p>{% if r.get("feedback") %}<div class="cn-callout info mb-0"><i class="fa-solid fa-comment"></i><div>{{ r.get("feedback") }}</div></div>{% endif %}</div>
+      {% endif %}
+      {% if q.explanation %}<div class="small text-muted mt-2"><i class="fa-solid fa-lightbulb me-1"></i>{{ q.explanation }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    {% else %}<div class="cn-card">{{ ui.empty("fa-lock", "Answers are hidden", "Your teacher will discuss the answers in class.") }}</div>{% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{{ asset('js/test.js') }}" defer></script>{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Tasks{% endblock %}
+{% block content %}
+{% call ui.page_header("Tasks", "Assignments, homework and tests appear on each student's calendar.", "fa-list-check") %}
+  <form method="get"><select class="form-select" name="batch" data-autosubmit aria-label="Batch"><option value="0">All batches</option>
+    {% for b in batches %}<option value="{{ b.id }}" {{ 'selected' if b.id == batch }}>{{ b.name }}</option>{% endfor %}</select></form>
+  <a class="btn btn-ghost" href="/admin/tests/generate"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>AI test</a>
+  <a class="btn btn-primary" href="/admin/tasks/new{{ '?batch=' ~ batch if batch }}"><i class="fa-solid fa-plus me-2"></i>New task</a>
+{% endcall %}
+<div class="cn-card flush">
+  {% if tasks %}
+  <div class="cn-table-wrap"><table class="cn-table">
+    <thead><tr><th>Task</th><th>Batch</th><th>Assigned</th><th>Deadline</th><th class="num">Done</th><th></th></tr></thead>
+    <tbody>{% for t in tasks %}{% set done = attempts.get(t.test_id, 0) if t.test_id else submissions.get(t.id, 0) %}{% set size = sizes.get(t.batch_id, 0) %}
+      <tr><td><a class="fw-bold" href="/admin/tasks/{{ t.id }}">{{ t.title }}</a>
+        <div class="small text-muted">{{ C.TASK_KINDS.get(t.kind, t.kind) }}{% if t.is_holiday_homework %} · <span class="text-warning">🏖️ Holiday homework</span>{% endif %}</div></td>
+        <td><span class="cn-chip"><span class="cn-color-dot" style="background:{{ t.batch.color }}"></span>{{ t.batch.name }}</span></td>
+        <td>{{ t.assign_date|d('%d %b') }}</td>
+        <td>{{ t.due_date|d('%d %b %Y') }}{% if t.due_date < today() %} <span class="cn-badge neutral">Closed</span>{% endif %}</td>
+        <td class="num">{{ done }} / {{ size }}</td>
+        <td><div class="cn-actions"><a class="btn btn-soft btn-sm" href="/admin/tasks/{{ t.id }}">Open</a>
+          <form method="post" action="/admin/tasks/{{ t.id }}/delete" data-confirm="Delete this task and its submissions?">{{ csrf_field() }}<button class="btn btn-soft-danger btn-sm" type="submit"><i class="fa-solid fa-trash-can"></i></button></form></div></td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}{{ ui.empty("fa-list-check", "No tasks yet", "Give an assignment or publish a test — dates that fall on holidays are blocked automatically.", "/admin/tasks/new", "New task") }}{% endif %}
+</div>
+{% endblock %}

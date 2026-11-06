@@ -1,0 +1,28 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ "New page" if not page.id else "Edit " ~ page.title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" integrity="sha384-ecIckRi4QlKYya/FQUbBUjS4qp65jF/J87Guw5uzTbO1C1Jfa/6kYmd6dXUF6D7i" crossorigin="anonymous">{% endblock %}
+{% block content %}
+{% call ui.page_header("New page" if not page.id else page.title, "Rich text is sanitised automatically before publishing.", "fa-file-pen") %}
+  <a class="btn btn-ghost" href="/admin/site/pages"><i class="fa-solid fa-arrow-left me-2"></i>Back</a>
+{% endcall %}
+{% if page.slug == "terms" %}<div class="cn-callout warning"><i class="fa-solid fa-scale-balanced"></i><div>This page contains the legal disclaimer that the software is a <strong>student-grade project</strong> and that the author is not responsible. Please keep that section.</div></div>{% endif %}
+<form method="post" action="/admin/site/pages/{{ page.id or 0 }}" class="cn-card">
+  {{ csrf_field() }}
+  <div class="cn-form-grid">
+    {{ ui.field("title", "Title", value=page.title, required=True) }}
+    {{ ui.field("slug", "URL slug", value=page.slug, help="Leave blank to generate from the title. Address: /p/<slug>", attrs="readonly" if page.slug == "terms" else "") }}
+  </div>
+  <div class="cn-field"><label class="form-label">Content</label><div data-quill="#page-body" style="min-height: 360px"></div>
+    <input type="hidden" name="body" id="page-body" value="{{ page.body }}"></div>
+  <div class="d-flex flex-wrap gap-4 align-items-center">
+    {{ ui.check("is_published", "Published", checked=page.is_published) }}
+    {{ ui.check("show_in_footer", "Show in footer", checked=page.show_in_footer) }}
+    <button class="btn btn-primary ms-auto" type="submit"><i class="fa-solid fa-floppy-disk me-2"></i>Save page</button>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js" integrity="sha384-utBUCeG4SYaCm4m7GQZYr8Hy8Fpy3V4KGjBZaf4WTKOcwhCYpt/0PfeEe3HNlwx8" crossorigin="anonymous" defer></script>
+<script src="{{ asset('js/builder.js') }}" defer></script>
+{% endblock %}

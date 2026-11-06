@@ -1,0 +1,40 @@
+# ---- Web framework -------------------------------------------------------
+fastapi>=0.115
+uvicorn>=0.32
+websockets>=13.0          # WebSocket support for live classes & chat
+python-multipart>=0.0.12  # form + file uploads
+jinja2>=3.1.4
+itsdangerous>=2.2         # signed session cookies / tokens
+python-dotenv>=1.0
+
+# ---- Database: async PostgreSQL + pgvector --------------------------------
+sqlalchemy[asyncio]>=2.0.36
+asyncpg>=0.30
+pgvector>=0.3.6
+numpy>=2.1
+
+# ---- Settings / validation ------------------------------------------------
+pydantic>=2.9
+pydantic-settings>=2.6
+
+# ---- Security -------------------------------------------------------------
+bcrypt>=4.2               # password hashing
+nh3>=0.2.18               # HTML sanitiser (rich text, AI markdown)
+
+# ---- AI (OpenAI-compatible local gateway) ---------------------------------
+openai>=1.55               # OpenAI-compatible client: local vLLM (Gemma 3) or a LAN gateway
+anthropic>=2.6             # official Claude SDK (AI_PROVIDER=anthropic)
+httpx>=0.27
+
+# ---- Email / documents / images -------------------------------------------
+aiosmtplib>=3.0
+pillow>=11.0              # ID cards, photo normalisation
+pypdf>=5.1                # text extraction for the knowledge base
+markdown>=3.7
+
+# ---- Asset pipeline (JS/CSS minification) ---------------------------------
+rjsmin>=1.2
+rcssmin>=1.1
+
+# ---- Misc -----------------------------------------------------------------
+tzdata>=2024.2            # IANA time zones on Windows

@@ -1,0 +1,30 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ "Edit " ~ batch.name if batch else "New batch" }}{% endblock %}
+{% block content %}
+{% call ui.page_header("Edit " ~ batch.name if batch else "New batch", "A batch is a group of students with a fixed weekly timetable.", "fa-layer-group") %}
+  <a class="btn btn-ghost" href="{{ '/admin/batches/' ~ batch.id if batch else '/admin/batches' }}"><i class="fa-solid fa-arrow-left me-2"></i>Back</a>
+{% endcall %}
+<form method="post" action="{{ '/admin/batches/' ~ batch.id ~ '/edit' if batch else '/admin/batches/new' }}" class="cn-card" style="max-width: 900px">
+  {{ csrf_field() }}
+  <div class="cn-form-grid">
+    {{ ui.field("name", "Batch name", value=batch.name if batch else "", required=True, placeholder="e.g. Class 10 Maths – Evening") }}
+    <div class="cn-field"><label class="form-label">Colour</label><input class="form-control form-control-color w-100" type="color" name="color" value="{{ batch.color if batch else '#6366f1' }}"></div>
+    {{ ui.select("class_level", "Class", C.CLASS_LEVELS, selected=batch.class_level if batch else None, required=True, empty_label="Select…") }}
+    <div class="cn-field"><label class="form-label">Subject <span class="text-danger">*</span></label>
+      <input class="form-control" name="subject" list="subjects" value="{{ batch.subject if batch else '' }}" required>
+      <datalist id="subjects">{% for s in C.SUBJECT_SUGGESTIONS %}<option value="{{ s }}">{% endfor %}</datalist></div>
+    <div class="cn-field span-2"><label class="form-label">Days <span class="text-danger">*</span></label>
+      <div class="d-flex flex-wrap gap-2">{% for d in C.WEEKDAY_SHORT %}
+        <label class="cn-chip" style="cursor:pointer"><input class="form-check-input me-1" type="checkbox" name="days" value="{{ loop.index0 }}" {{ 'checked' if batch and loop.index0 in batch.days }}>{{ d }}</label>{% endfor %}</div></div>
+    {{ ui.field("start_time", "Start time", type="time", value=batch.start_time.strftime('%H:%M') if batch else "16:00", required=True) }}
+    {{ ui.field("end_time", "End time", type="time", value=batch.end_time.strftime('%H:%M') if batch else "17:00", required=True, help="Minimum " ~ settings.MIN_BATCH_MINUTES ~ " minutes") }}
+    <div class="cn-field"><label class="form-label">Teacher</label><select class="form-select" name="teacher_id"><option value="">— Not assigned —</option>
+      {% for t in teachers %}<option value="{{ t.id }}" {{ 'selected' if batch and batch.teacher_id == t.id }}>{{ t.full_name }} · {{ t.role_label }}</option>{% endfor %}</select></div>
+    {{ ui.field("monthly_fee", "Monthly fee (₹)", type="number", value=batch.monthly_fee if batch else "0", attrs='step="0.01" min="0"') }}
+    {{ ui.textarea("description", "Description", value=batch.description if batch else "", rows=2, cls="span-2") }}
+    {{ ui.check("is_active", "Active", checked=batch.is_active if batch else True, help="Only active batches count towards the " ~ settings.MAX_BATCHES ~ "-batch and " ~ settings.MAX_DAILY_HOURS|num ~ "-hour daily limits") }}
+  </div>
+  <div class="text-end"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk me-2"></i>Save batch</button></div>
+</form>
+{% endblock %}

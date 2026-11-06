@@ -1,0 +1,94 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Load test report{% endblock %}
+{% block content %}
+{% call ui.page_header("Load test report", (report.title ~ " · " ~ report.ran_at) if report else "No load test recorded yet", "fa-chart-line") %}{% endcall %}
+{% if not report %}
+<div class="cn-card">{{ ui.empty("fa-chart-line", "No report yet", "Run the Locust test described in loadtest/README.md to create one.") }}</div>
+{% else %}
+{% set t = report.totals %}{% set top = report.steps[-1] %}
+{# a value with its unit, or a dash when the run has no figure for it #}
+{% macro unit(v, u) %}{% if v is not none %}{{ "{:,}".format(v) if v is number and v >= 1000 else v }} {{ u }}{% else %}—{% endif %}{% endmacro %}
+<div class="cn-grid cols-4 mb-4">
+  {{ ui.stat("Requests answered", "{:,}".format(t.requests), "fa-server", "primary", hint="in " ~ (report.duration_s // 60) ~ " minutes · " ~ "{:,}".format(t.sign_ins) ~ " sign-ins") }}
+  {{ ui.stat("Failed requests", "{:,}".format(t.failures), "fa-circle-check" if not t.failures else "fa-triangle-exclamation", "success" if not t.failures else "danger", hint=t.failure_pct ~ " % of all requests") }}
+  {{ ui.stat("Peak throughput", t.rps_peak ~ " req/s", "fa-gauge-high", "info", hint="average " ~ t.rps_avg ~ " req/s over the test") }}
+  {{ ui.stat("p95 at " ~ top.users ~ " users", unit(top.p95, "ms"), "fa-stopwatch", "violet", hint="median " ~ unit(top.p50, "ms") ~ " · p99 " ~ unit(top.p99, "ms")) }}
+</div>
+
+<div class="cn-callout info"><i class="fa-solid fa-flask"></i><div class="small">
+  <strong>How it was run.</strong> {{ report.tool }} against {{ report.target }}. <br>
+  <strong>Machine:</strong> {{ report.machine }}. <strong>Data:</strong> {{ report.data }}. <br>
+  <strong>Load:</strong> {{ report.steps|map(attribute="users")|join(" → ") }} concurrent users, {{ (top.to_s - top.from_s) // 60 }} minutes each, plus {{ report.ai_users }} students asking the AI tutor throughout; {{ report.think_time }}.
+</div></div>
+
+<div class="cn-grid cols-2 mb-4">
+  {{ ui.chart("lt-rps", "Requests per second", "5-second average · the load steps up every " ~ ((top.to_s - top.from_s) // 60) ~ " minutes", charts.rps, "line", "num", "req/s") }}
+  {{ ui.chart("lt-p95", "95th-percentile response time", "Page and API requests, rolling 10-second window", charts.p95, "line", "num", "ms") }}
+  {{ ui.chart("lt-users", "Concurrent users", "The stepped load, including the AI-tutor users", charts.users, "line", "num", "users") }}
+  {% if charts.cpu|map(attribute="value")|select("number")|list %}{{ ui.chart("lt-cpu", "App CPU", "% of one core — the app is one async worker", charts.cpu, "line", "num", "% CPU") }}{% endif %}
+</div>
+
+<div class="cn-card flush mb-4">
+  <div class="cn-card-head"><h3>By load step</h3><span class="small text-muted">steady part of each step</span></div>
+  <div class="cn-table-wrap"><table class="cn-table">
+    <thead><tr><th>Users</th><th class="num">Requests</th><th class="num">Failed</th><th class="num">Req/s</th><th class="num">Median</th><th class="num">p95</th><th class="num">p99</th><th class="num">Slowest</th><th class="num">AI 1st word</th><th class="num">App CPU avg / peak</th><th class="num">DB CPU</th><th class="num">App RAM</th></tr></thead>
+    <tbody>{% for s in report.steps %}<tr class="text-nowrap">
+      <td class="fw-bold">{{ s.users }}</td><td class="num">{{ "{:,}".format(s.requests) }}</td><td class="num">{{ s.failures }}</td><td class="num">{{ s.rps }}</td>
+      <td class="num">{{ unit(s.p50, "ms") }}</td><td class="num">{{ unit(s.p95, "ms") }}</td><td class="num">{{ unit(s.p99, "ms") }}</td><td class="num">{{ unit(s.worst, "ms") }}</td>
+      <td class="num">{{ unit((s.ai_first_word_p50 / 1000)|round(1) if s.ai_first_word_p50 is not none else none, "s") }}</td>
+      <td class="num">{% if s.app_cpu is not none %}{{ s.app_cpu|round|int }} / {{ s.app_cpu_peak|round|int }} %{% else %}—{% endif %}</td>
+      <td class="num">{{ unit(s.db_cpu|round|int if s.db_cpu is not none else none, "%") }}</td><td class="num">{{ unit(s.app_mem, "MB") }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+
+<div class="cn-grid cols-2 mb-4">
+  <div class="cn-card flush">
+    <div class="cn-card-head"><h3>Who did what</h3></div>
+    <div class="cn-table-wrap"><table class="cn-table"><thead><tr><th>Simulated people</th><th>Share</th><th>What they did</th></tr></thead>
+      <tbody>{% for m in report.mix %}<tr><td class="fw-bold">{{ m.who }}</td><td>{{ m.share }}</td><td class="small">{{ m.does }}</td></tr>{% endfor %}</tbody></table></div>
+  </div>
+  <div class="cn-card">
+    <div class="cn-card-head"><h3><i class="fa-solid fa-robot me-2 text-muted"></i>AI tutor under load</h3></div>
+    {% set ai = report.ai %}{% set others = [] %}
+    {% if ai.fallback %}{% set _ = others.append(ai.fallback ~ " answered from the notes (fallback)") %}{% endif %}
+    {% if ai.rate_limited %}{% set _ = others.append(ai.rate_limited ~ " rate-limited") %}{% endif %}
+    {% if ai.failed %}{% set _ = others.append(ai.failed ~ " failed") %}{% endif %}
+    <div class="cn-grid cols-2">
+      {{ ui.stat("Answered by the model", ai.by_model ~ " of " ~ ai.asked, "fa-comments", "primary", hint=others|join(" · ") if others else "every question asked") }}
+      {{ ui.stat("First word (median / p95)", (((ai.first_word_p50 / 1000)|round(1)) ~ " s / " ~ ((ai.first_word_p95 / 1000)|round(1)) ~ " s") if ai.first_word_p50 is not none else "—", "fa-bolt", "success") }}
+      {{ ui.stat("Whole answer (median / p95)", (((ai.answer_p50 / 1000)|round|int) ~ " s / " ~ ((ai.answer_p95 / 1000)|round|int) ~ " s") if ai.answer_p50 is not none else "—", "fa-hourglass-half", "info") }}
+      {{ ui.stat("Model", (ai.model or "—").split(" · ")[0], "fa-microchip", "violet", hint=(ai.model or "").split(" · ")[1:]|join(" · ")) }}
+    </div>
+    <p class="small text-muted mt-3 mb-0">Answers stream word by word, so students see the first words long before the whole answer is done. These timings are measured separately: the request tables count opening the answer stream, not the seconds it takes to stream.</p>
+  </div>
+</div>
+
+<div class="cn-card flush mb-4">
+  <div class="cn-card-head"><h3>Every endpoint</h3><span class="small text-muted">sorted by how often it was called</span></div>
+  <div class="cn-table-wrap"><table class="cn-table">
+    <thead><tr><th>Request</th><th class="num">Calls</th><th class="num">Failed</th><th class="num">Median</th><th class="num">p95</th><th class="num">p99</th><th class="num">Slowest</th><th class="num">Avg size</th></tr></thead>
+    <tbody>{% for e in report.endpoints %}<tr class="text-nowrap"><td class="small"><code>{{ e.name }}</code></td><td class="num">{{ "{:,}".format(e.requests) }}</td><td class="num">{{ e.failures }}</td>
+      <td class="num">{{ unit(e.p50|int, "ms") }}</td><td class="num">{{ unit(e.p95|int, "ms") }}</td><td class="num">{{ unit(e.p99|int, "ms") }}</td><td class="num">{{ unit(e.max, "ms") }}</td><td class="num">{{ e.kb }} KB</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+
+{% if report.failures %}
+<div class="cn-card flush mb-4">
+  <div class="cn-card-head"><h3>Failures</h3></div>
+  <div class="cn-table-wrap"><table class="cn-table"><thead><tr><th>Request</th><th>Error</th><th class="num">Count</th></tr></thead>
+    <tbody>{% for f in report.failures %}<tr><td class="small"><code>{{ f.name }}</code></td><td class="small">{{ f.error }}</td><td class="num">{{ f.count }}</td></tr>{% endfor %}</tbody></table></div>
+</div>
+{% endif %}
+
+<div class="cn-card">
+  <div class="cn-card-head"><h3>Notes</h3></div>
+  <ul class="small mb-2">{% for n in report.notes %}<li>{{ n }}</li>{% endfor %}</ul>
+  <p class="small text-muted mb-0">The full interactive Locust report and the raw CSV files are in <code>docs/load-test/</code>.</p>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous" defer></script>
+<script src="{{ asset('js/charts.js') }}" defer></script>
+{% endblock %}

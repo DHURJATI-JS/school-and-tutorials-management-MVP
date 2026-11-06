@@ -1,0 +1,58 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+{% call ui.page_header("Welcome, " ~ user.name.split()[0] ~ " 👋", user.user.role_label ~ " · " ~ site.site_name, None) %}
+  <a class="btn btn-ghost" href="/assistant"><i class="fa-solid fa-robot me-2"></i>AI assistant</a>
+  <a class="btn btn-ghost" href="/staff/salary"><i class="fa-solid fa-file-invoice me-2"></i>Salary slips</a>
+{% endcall %}
+{% if user.is_teaching %}
+<div class="cn-grid cols-4 mb-4">
+  {{ ui.stat("My batches", batches|length, "fa-layer-group", "primary") }}
+  {{ ui.stat("Upcoming classes", lessons|length, "fa-chalkboard-user", "info", hint="Next 3 days") }}
+  {{ ui.stat("AI insights", alerts|length, "fa-wand-magic-sparkles", "warning" if alerts else "success", href="/staff/insights") }}
+  {{ ui.stat("Doubts for you", doubts, "fa-circle-question", "danger" if doubts else "success", href="/staff/doubts") }}
+</div>
+<div class="cn-grid cols-2">
+  <div class="cn-card">
+    <div class="cn-card-head"><h3>Your classes</h3></div>
+    <ul class="cn-list">{% for l in lessons %}{% set held = l.meeting and l.meeting.status == "ended" %}
+      <li><span class="cn-color-dot" style="background:{{ l.batch.color }}"></span>
+        <div class="flex-grow-1 min-w-0"><div class="fw-bold">{{ l.title }}</div><div class="small text-muted">{{ l.batch.name }} · {{ l.date|d('%a %d %b') }} · {{ l.start_time|t }}</div></div>
+        {% if l.video %}<span class="cn-badge success">Video</span>
+        {% elif not held %}<form method="post" action="/staff/lessons/{{ l.id }}/start">{{ csrf_field() }}<button class="btn btn-primary btn-sm" type="submit"><i class="fa-solid fa-video me-1"></i>{{ "Join" if l.meeting and l.meeting.status == "live" else "Start" }}</button></form>{% endif %}</li>
+      {% else %}<li class="text-muted small">No classes in the next few days.</li>{% endfor %}</ul>
+  </div>
+  <div class="cn-card">
+    <div class="cn-card-head"><h3>My batches</h3></div>
+    <ul class="cn-list">{% for b in batches %}<li><span class="cn-color-dot" style="background:{{ b.color }}"></span>
+      <div class="flex-grow-1"><a class="fw-bold" href="/staff/batches/{{ b.id }}">{{ b.name }}</a><div class="small text-muted">{{ b.days_label }} · {{ b.time_label }} · {{ sizes.get(b.id, 0) }} students</div></div>
+      <a class="btn btn-ghost btn-sm" href="/chat/{{ b.id }}"><i class="fa-solid fa-comments"></i></a></li>
+      {% else %}<li class="text-muted small">No batches assigned yet.</li>{% endfor %}</ul>
+  </div>
+  <div class="cn-card">
+    <div class="cn-card-head"><h3>AI insights</h3><a class="btn btn-ghost btn-sm" href="/staff/insights">All</a></div>
+    <ul class="cn-list">{% for a in alerts %}<li class="align-items-start">{{ ui.avatar(a.user, 34) }}<div class="flex-grow-1 min-w-0"><div class="fw-bold">{{ a.title }}</div><div class="small text-muted">{{ a.message }}</div></div>{{ ui.level(a.level) }}</li>
+      {% else %}<li class="text-muted small">No concerns right now 👍</li>{% endfor %}</ul>
+  </div>
+  <div class="cn-card">
+    <div class="cn-card-head"><h3>Notifications</h3></div>
+    <ul class="cn-list">{% for n in notifications %}<li><i class="fa-solid {{ n.icon }}" style="color: var(--cn-primary)"></i><div class="flex-grow-1">{% if n.link %}<a href="{{ n.link }}">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}<div class="small text-muted">{{ n.created_at|timeago }}</div></div></li>
+      {% else %}<li class="text-muted small">Nothing new.</li>{% endfor %}</ul>
+  </div>
+</div>
+{% else %}
+<div class="cn-grid cols-2">
+  <div class="cn-card">
+    <div class="cn-card-head"><h3>Latest salary slip</h3></div>
+    {% if salary %}<div class="h3">{{ salary.amount|money }}</div><p class="text-muted">{{ salary.title }} · {{ salary.period }} · {{ salary.status }}</p>
+      <a class="btn btn-soft" href="/staff/salary">View all slips</a>{% else %}<p class="text-muted mb-0">No salary slips yet.</p>{% endif %}
+  </div>
+  <div class="cn-card">
+    <div class="cn-card-head"><h3>Notifications</h3></div>
+    <ul class="cn-list">{% for n in notifications %}<li><i class="fa-solid {{ n.icon }}" style="color: var(--cn-primary)"></i><div>{{ n.title }}<div class="small text-muted">{{ n.created_at|timeago }}</div></div></li>
+      {% else %}<li class="text-muted small">Nothing new.</li>{% endfor %}</ul>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

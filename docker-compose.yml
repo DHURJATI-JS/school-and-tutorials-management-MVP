@@ -1,0 +1,126 @@
+# ClassNest infrastructure
+#   docker compose up -d                          -> PostgreSQL + pgvector, Tesseract OCR service, Mailpit (dev email)
+#   docker compose --profile llm-nvidia up -d     -> + Gemma 3 on vLLM using an NVIDIA GPU (Windows/WSL2 or Linux)
+#   docker compose --profile llm-amd up -d        -> + Gemma 3 on vLLM using an AMD GPU (Linux + ROCm only)
+#   docker compose --profile app up -d            -> also run the ClassNest web app in a container
+# `python run.py` picks the GPU profile and the model size automatically (see README -> AI models).
+name: classnest
+
+x-vllm: &vllm
+  restart: unless-stopped
+  entrypoint: ["vllm", "serve"]
+  command:
+    - ${VLLM_MODEL:-unsloth/gemma-3-1b-it}
+    - --served-model-name=${VLLM_SERVED_NAME:-gemma3}
+    - --host=0.0.0.0
+    - --port=8000
+    - --dtype=bfloat16                      # Gemma 3 is trained in bf16 (fp16 can overflow)
+    - --max-model-len=${VLLM_MAX_MODEL_LEN:-8192}
+    - --gpu-memory-utilization=${VLLM_GPU_MEMORY_UTILIZATION:-0.85}
+    - --max-num-seqs=${VLLM_MAX_NUM_SEQS:-16}
+    - ${VLLM_EAGER:---no-enforce-eager}     # run.py uses --enforce-eager on <6 GB GPUs (no CUDA-graph memory)
+  environment:
+    # clients must send it as a Bearer token; the app uses the same value as OPENAI_API_KEY
+    VLLM_API_KEY: ${VLLM_API_KEY:-${OPENAI_API_KEY:-classnest-local-llm}}
+    HF_TOKEN: ${HF_TOKEN:-}                              # only for gated repos such as google/gemma-3-*
+  ports:
+    - "${VLLM_BIND:-127.0.0.1}:${VLLM_PORT:-8002}:8000"   # loopback only by default; 8000 on the host stays free
+  volumes:
+    - hf-cache:/root/.cache/huggingface                    # model weights are downloaded once
+  ipc: host
+  healthcheck:
+    test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)\""]
+    interval: 15s
+    timeout: 10s
+    retries: 40
+    start_period: 180s
+  networks:
+    default:
+      aliases: [llm]          # the app container reaches either GPU flavour at http://llm:8000/v1
+
+services:
+  llm-nvidia:
+    <<: *vllm
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:v0.33.0}
+    profiles: ["llm-nvidia"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  llm-amd:
+    <<: *vllm
+    # RDNA (Radeon RX 7000 / 9000) build. Instinct MI-series: use a cdna tag, e.g. VLLM_AMD_IMAGE=rocm/vllm:latest
+    image: ${VLLM_AMD_IMAGE:-rocm/vllm:rocm7.14.1_rdna_ubuntu24.04_py3.14_pytorch_2.11_vllm_0.23.0}
+    profiles: ["llm-amd"]
+    devices: ["/dev/kfd", "/dev/dri"]
+    group_add: ["video", "render"]
+    security_opt: ["seccomp=unconfined"]
+    shm_size: 8g
+
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-classnest}
+      POSTGRES_USER: ${POSTGRES_USER:-classnest}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-classnest}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  ocr:
+    build: ./ocr_service
+    restart: unless-stopped
+    environment:
+      OCR_SHARED_SECRET: ${OCR_SHARED_SECRET:-}
+    ports:
+      - "8001:8001"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025"   # web UI: http://localhost:8025
+      - "1025:1025"   # SMTP
+
+  app:
+    build: .
+    profiles: ["app"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      IN_DOCKER: "1"
+      HOST: "0.0.0.0"         # inside the container; PORT in .env only picks the host port mapped below
+      PORT: "8080"
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      OCR_SERVICE_URL: http://ocr:8001
+      # AI from the vLLM container (start it with --profile llm-nvidia or --profile llm-amd)
+      OPENAI_BASE_URL: http://llm:8000/v1
+      OPENAI_API_KEY: ${VLLM_API_KEY:-${OPENAI_API_KEY:-classnest-local-llm}}
+      LLM_MODEL: ${VLLM_SERVED_NAME:-gemma3}
+    depends_on:
+      db:
+        condition: service_healthy
+      ocr:
+        condition: service_started
+    ports:
+      - "${PORT:-8080}:8080"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./certs:/app/certs:ro
+
+volumes:
+  pgdata:
+  hf-cache:

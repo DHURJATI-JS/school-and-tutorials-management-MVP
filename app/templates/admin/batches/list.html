@@ -1,0 +1,30 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Batches{% endblock %}
+{% block content %}
+{% call ui.page_header("Batches", active ~ " of " ~ settings.MAX_BATCHES ~ " active batches · each at least " ~ (settings.MIN_BATCH_MINUTES // 60) ~ " hour · at most " ~ settings.MAX_DAILY_HOURS|num ~ " hours per day in total", "fa-layer-group") %}
+  <a class="btn btn-primary" href="/admin/batches/new"><i class="fa-solid fa-plus me-2"></i>New batch</a>
+{% endcall %}
+<div class="cn-card mb-4">
+  <div class="cn-card-head"><h3>Daily load</h3><span class="small text-muted">Cumulative scheduled hours per weekday (limit {{ settings.MAX_DAILY_HOURS|num }} h)</span></div>
+  <div class="cn-grid" style="grid-template-columns: repeat(7, minmax(0, 1fr))">
+    {% for day in C.WEEKDAY_SHORT %}{% set mins = load[loop.index0] %}{% set pct = (mins * 100 / limit)|round|int %}
+    <div><div class="d-flex justify-content-between small fw-semibold mb-1"><span>{{ day }}</span><span class="tabular">{{ (mins / 60)|num }} h</span></div>
+      <div class="cn-meter {{ 'danger' if pct >= 100 else ('warn' if pct >= 80 else '') }}" role="meter" aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ day }} load"><span style="width: {{ [pct, 100]|min }}%"></span></div></div>
+    {% endfor %}
+  </div>
+</div>
+{% if batches %}
+<div class="cn-grid auto">
+  {% for b in batches %}
+  <a class="cn-card d-block" href="/admin/batches/{{ b.id }}" style="border-top: 4px solid {{ b.color }}; color: inherit">
+    <div class="d-flex justify-content-between align-items-start mb-2"><h3 class="h5 mb-0">{{ b.name }}</h3>{{ ui.status("active" if b.is_active else "none", "Active" if b.is_active else "Inactive") }}</div>
+    <div class="small text-muted mb-3">{{ b.class_level }} · {{ b.subject }}</div>
+    <div class="small mb-1"><i class="fa-regular fa-clock me-2 text-muted"></i>{{ b.days_label }} · {{ b.time_label }} ({{ (b.duration_minutes / 60)|num }} h)</div>
+    <div class="small mb-1"><i class="fa-solid fa-chalkboard-user me-2 text-muted"></i>{{ b.teacher.full_name if b.teacher else "No teacher assigned" }}</div>
+    <div class="small"><i class="fa-solid fa-users me-2 text-muted"></i>{{ counts.get(b.id, 0) }} students · {{ b.monthly_fee|money }}/month</div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}<div class="cn-card">{{ ui.empty("fa-layer-group", "No batches yet", "Create your first batch — for example “Class 10 · Mathematics · Mon/Wed/Fri 4–5 PM”.", "/admin/batches/new", "Create batch") }}</div>{% endif %}
+{% endblock %}

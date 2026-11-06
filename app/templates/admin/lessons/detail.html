@@ -1,0 +1,73 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ lesson.title }}{% endblock %}
+{% block content %}
+{% set held = lesson.meeting and lesson.meeting.status in ("live", "ended") %}
+{% call ui.page_header(lesson.title, lesson.batch.name ~ " · " ~ lesson.date|d('%A %d %b %Y') ~ " · " ~ lesson.start_time|t ~ "–" ~ lesson.end_time|t, "fa-chalkboard-user") %}
+  {% if lesson.status == "scheduled" %}
+  <form method="post" action="/admin/lessons/{{ lesson.id }}/cancel" data-confirm="Cancel this class and notify students?">{{ csrf_field() }}<button class="btn btn-soft-danger" type="submit">Cancel class</button></form>
+  {% if not lesson.video and lesson.meeting and lesson.meeting.status != "ended" %}
+  <form method="post" action="/admin/lessons/{{ lesson.id }}/start">{{ csrf_field() }}<button class="btn btn-primary" type="submit"><i class="fa-solid fa-video me-2"></i>{{ "Join live class" if lesson.meeting.status == "live" else "Start live class" }}</button></form>
+  {% endif %}{% endif %}
+{% endcall %}
+{% if lesson.status == "cancelled" %}<div class="cn-callout danger"><i class="fa-solid fa-ban"></i><div>This class was cancelled.</div></div>
+{% elif not lesson.video and not held %}<div class="cn-callout warning"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>Live class mandatory.</strong> No pre-recorded video is attached, so this class must be held live. Admins were emailed {{ lesson.warning_sent_at|timeago if lesson.warning_sent_at else "" }}. Attach a video to remove the requirement.</div></div>{% endif %}
+<div class="cn-grid" style="grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr)">
+  <div>
+    {% if lesson.video %}
+    <div class="cn-card"><div class="cn-card-head"><h3><i class="fa-solid fa-film me-2 text-muted"></i>{{ lesson.video.title }}</h3>{{ ui.status("ready", lesson.video.source|capitalize) }}</div>
+      <div class="cn-player">{% if lesson.video.file_path %}<video controls preload="metadata" src="/files/video/{{ lesson.video.id }}"></video>{% else %}<video controls preload="metadata" src="{{ lesson.video.external_url }}"></video>{% endif %}</div>
+      {% if lesson.video.notes %}<div class="cn-rich mt-3 small">{{ lesson.video.notes|nl2p }}</div>{% endif %}</div>
+    {% include "partials/comments.html" %}
+    {% endif %}
+    {% if lesson.meeting %}
+    <div class="cn-card"><div class="cn-card-head"><h3><i class="fa-solid fa-video me-2 text-muted"></i>Live room</h3>{{ ui.status(lesson.meeting.status) }}</div>
+      <p class="small mb-2">Room code <code>{{ lesson.meeting.code }}</code> · host {{ lesson.meeting.host_name }}</p>
+      <a class="btn btn-ghost btn-sm" href="/admin/meetings/{{ lesson.meeting.id }}">Meeting details, notes & recording</a></div>
+    {% endif %}
+    <div class="cn-card" id="attendance"><div class="cn-card-head"><h3>Attendance</h3><span class="small text-muted">Auto: 50% of the video watched or the whole live class attended</span></div>
+      <div class="cn-table-wrap"><table class="cn-table"><thead><tr><th>Student</th><th>Status</th><th>How</th><th></th></tr></thead><tbody>
+        {% for s in students %}{% set a = marks.get(s.id) %}<tr><td>{{ ui.person(s, s.id_code) }}</td>
+          <td>{{ ui.status(a.status if a else "none", (a.status|capitalize) if a else "Not marked") }}</td><td class="small text-muted">{{ a.detail if a else "" }}</td>
+          <td><form method="post" action="/admin/lessons/{{ lesson.id }}/attendance" class="d-flex gap-1 justify-content-end">{{ csrf_field() }}<input type="hidden" name="user_id" value="{{ s.id }}">
+            <button class="btn btn-soft-success btn-sm" name="status" value="present" type="submit" title="Mark present"><i class="fa-solid fa-check"></i></button>
+            <button class="btn btn-soft-danger btn-sm" name="status" value="absent" type="submit" title="Mark absent"><i class="fa-solid fa-xmark"></i></button></form></td></tr>
+        {% endfor %}</tbody></table></div></div>
+  </div>
+  <div>
+    {% if lesson.status == "scheduled" and not (lesson.meeting and lesson.meeting.status != "scheduled") %}
+    <form class="cn-card" method="post" action="/admin/lessons/{{ lesson.id }}/edit">
+      {{ csrf_field() }}
+      <h3 class="h6"><i class="fa-solid fa-pen me-2 text-muted"></i>Edit or reschedule</h3>
+      <p class="small text-muted">Students are notified when the date or time changes.{% if lesson.meeting %} Pick another host for a substitute teacher — they get the room link.{% endif %}</p>
+      {{ ui.field("title", "Topic", value=lesson.title, required=True) }}
+      {{ ui.field("date", "Date", type="date", value=lesson.date.isoformat(), required=True) }}
+      <div class="cn-form-grid">
+        {{ ui.field("start_time", "Start", type="time", value=lesson.start_time.strftime('%H:%M'), required=True) }}
+        {{ ui.field("end_time", "End", type="time", value=lesson.end_time.strftime('%H:%M'), required=True) }}
+      </div>
+      {% if lesson.meeting %}
+      <div class="cn-field"><label class="form-label" for="host_id">Host</label>
+        <select class="form-select" name="host_id" id="host_id"><option value="">Keep {{ lesson.meeting.host_name }}</option>
+          {% for t in teachers if t.id != lesson.meeting.host_user_id %}<option value="{{ t.id }}">{{ t.full_name }} · {{ t.role_label }}</option>{% endfor %}</select></div>
+      {% endif %}
+      <button class="btn btn-primary w-100" type="submit"><i class="fa-solid fa-floppy-disk me-2"></i>Save changes</button>
+    </form>
+    {% endif %}
+    {% if not lesson.video and lesson.status == "scheduled" %}
+    <form class="cn-card" method="post" action="/admin/lessons/{{ lesson.id }}/attach-video" enctype="multipart/form-data">
+      {{ csrf_field() }}
+      <h3 class="h6">Attach a pre-recorded video</h3>
+      <p class="small text-muted">Once attached, a live meeting is no longer required.</p>
+      <div class="cn-field"><select class="form-select" name="video_id"><option value="">— Upload new —</option>{% for v in videos %}<option value="{{ v.id }}">{{ v.title }}</option>{% endfor %}</select></div>
+      <div class="cn-field"><input class="form-control" type="file" name="video_file" accept="video/*" data-duration-into="#att-duration"></div>
+      {{ ui.field("external_url", "or https:// link") }}{{ ui.textarea("notes", "Notes for the AI", rows=2) }}
+      <input type="hidden" name="duration_seconds" id="att-duration">
+      <button class="btn btn-primary w-100" type="submit" data-loading="Uploading…">Attach video</button>
+    </form>
+    {% endif %}
+    {% if lesson.description %}<div class="cn-card"><h3 class="h6">Description</h3><div class="small">{{ lesson.description|nl2p }}</div></div>{% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}{% if lesson.video %}<script src="{{ asset('js/comments.js') }}" defer></script>{% endif %}{% endblock %}

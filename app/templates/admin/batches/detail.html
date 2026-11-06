@@ -1,0 +1,63 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ batch.name }}{% endblock %}
+{% block content %}
+<div class="cn-page-head">
+  <div><span class="cn-head-icon" style="background: color-mix(in srgb, {{ batch.color }} 15%, transparent); color: {{ batch.color }}"><i class="fa-solid fa-layer-group"></i></span>
+    <div><h1>{{ batch.name }}</h1><p>{{ batch.class_level }} · {{ batch.subject }} · {{ batch.days_label }} {{ batch.time_label }} · {{ batch.teacher.full_name if batch.teacher else "No teacher" }}</p></div></div>
+  <div class="cn-page-actions">
+    <a class="btn btn-ghost" href="/chat/{{ batch.id }}"><i class="fa-solid fa-comments me-2"></i>Chat</a>
+    <a class="btn btn-ghost" href="/admin/batches/{{ batch.id }}/edit"><i class="fa-solid fa-pen me-2"></i>Edit</a>
+    <a class="btn btn-ghost" href="/admin/tasks/new?batch={{ batch.id }}"><i class="fa-solid fa-list-check me-2"></i>Task</a>
+    <a class="btn btn-primary" href="/admin/lessons/new?batch={{ batch.id }}"><i class="fa-solid fa-plus me-2"></i>Class</a>
+  </div>
+</div>
+<div class="cn-grid" style="grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr)">
+  <div class="cn-card flush">
+    <div class="cn-card-head"><h3>Students ({{ students|length }})</h3>
+      <button class="btn btn-soft btn-sm" type="button" data-modal-open="#enroll-modal"><i class="fa-solid fa-user-plus me-1"></i>Add students</button></div>
+    {% if students %}
+    <div class="cn-table-wrap mt-2"><table class="cn-table"><thead><tr><th>Student</th><th>Parent</th><th>Health / needs</th><th></th></tr></thead><tbody>
+      {% for s in students %}<tr>
+        <td>{{ ui.person(s, s.id_code, "/admin/members/" ~ s.id) }}</td>
+        <td class="small">{{ s.parent_name }}<div class="text-muted">{{ s.parent_phone }}</div></td>
+        <td class="small">{% if s.special_needs %}<span class="cn-badge info"><i class="fa-solid fa-hand-holding-heart"></i>Special needs</span>{% endif %}
+          {% for h in s.health_records %}<div title="{{ h.notes or '' }}"><i class="fa-solid fa-notes-medical text-warning me-1"></i>{{ h.condition }}</div>{% endfor %}</td>
+        <td><form method="post" action="/admin/batches/{{ batch.id }}/unenroll/{{ s.id }}" data-confirm="Remove {{ s.full_name }} from this batch?">{{ csrf_field() }}
+          <button class="btn btn-ghost btn-sm" type="submit" title="Remove from batch"><i class="fa-solid fa-user-minus"></i></button></form></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}{{ ui.empty("fa-users", "No students yet", "Add students to this batch.") }}{% endif %}
+  </div>
+  <div>
+    <div class="cn-card">
+      <div class="cn-card-head"><h3>Classes</h3><a class="btn btn-ghost btn-sm" href="/admin/lessons">All</a></div>
+      <ul class="cn-list">{% for l in lessons %}<li><div class="flex-grow-1 min-w-0"><a class="fw-bold" href="/admin/lessons/{{ l.id }}">{{ l.title }}</a>
+        <div class="small text-muted">{{ l.date|d('%a %d %b') }} · {{ l.start_time|t }}</div></div>
+        {% if l.video %}<span class="cn-badge success">Video</span>{% elif l.meeting %}{{ ui.status(l.meeting.status) }}{% endif %}</li>
+        {% else %}<li class="text-muted small">No classes scheduled.</li>{% endfor %}</ul>
+    </div>
+    <div class="cn-card">
+      <div class="cn-card-head"><h3>Tasks & tests</h3></div>
+      <ul class="cn-list">{% for t in tasks %}<li><div class="flex-grow-1"><a class="fw-bold" href="/admin/tasks/{{ t.id }}">{{ t.title }}</a>
+        <div class="small text-muted">{{ C.TASK_KINDS.get(t.kind, t.kind) }} · due {{ t.due_date|d('%d %b') }}</div></div></li>
+        {% else %}<li class="text-muted small">No tasks yet.</li>{% endfor %}
+        {% for t in tests if t.status != "published" %}<li><div class="flex-grow-1"><a class="fw-bold" href="/admin/tests/{{ t.id }}">{{ t.title }}</a><div class="small text-muted">Test draft</div></div>{{ ui.status(t.status) }}</li>{% endfor %}</ul>
+    </div>
+  </div>
+</div>
+{% call ui.modal("enroll-modal", "Add students to " ~ batch.name, "lg") %}
+<form method="post" action="/admin/batches/{{ batch.id }}/enroll">
+  {{ csrf_field() }}
+  <div class="cn-modal-body">
+    {% if available %}
+    <label class="cn-chip mb-2"><input class="form-check-input me-1" type="checkbox" data-check-all=".enroll-box">Select all</label>
+    <div style="max-height: 50vh; overflow-y: auto">{% for s in available %}
+      <label class="d-flex align-items-center gap-2 py-2 border-bottom" style="cursor:pointer"><input class="form-check-input enroll-box" type="checkbox" name="user_ids" value="{{ s.id }}">
+        <span class="fw-semibold">{{ s.full_name }}</span><span class="small text-muted">{{ s.class_level }} · {{ s.id_code }}</span></label>{% endfor %}</div>
+    <p class="small text-muted mt-2 mb-0">Students whose timetable would overlap or exceed {{ settings.MAX_DAILY_HOURS|num }} h/day are skipped with a warning.</p>
+    {% else %}<p class="text-muted mb-0">All active students are already in this batch.</p>{% endif %}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Add selected</button></div>
+</form>
+{% endcall %}
+{% endblock %}

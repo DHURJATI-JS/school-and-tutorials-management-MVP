@@ -1,0 +1,11 @@
+# Store text with LF line endings in the repository; Windows batch files keep CRLF (cmd.exe needs it)
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.ico binary
+*.webm binary
+*.woff2 binary

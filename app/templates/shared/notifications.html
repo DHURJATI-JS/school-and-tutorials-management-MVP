@@ -1,0 +1,14 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+{% call ui.page_header("Notifications", "Updates about classes, tasks, results, fees and friends.", "fa-bell") %}{% endcall %}
+<div class="cn-card">
+  {% if items %}<ul class="cn-list">{% for n in items %}
+    <li class="align-items-start"><span class="cn-head-icon" style="width:38px;height:38px"><i class="fa-solid {{ n.icon }}"></i></span>
+      <div class="flex-grow-1 min-w-0">{% if n.link %}<a class="fw-bold" href="{{ n.link }}">{{ n.title }}</a>{% else %}<span class="fw-bold">{{ n.title }}</span>{% endif %}
+        {% if not n.is_read %}<span class="cn-badge primary ms-1">New</span>{% endif %}<div class="small text-muted">{{ n.body or "" }}</div></div>
+      <span class="small text-muted text-nowrap">{{ n.created_at|timeago }}</span></li>{% endfor %}</ul>
+  {% else %}{{ ui.empty("fa-bell-slash", "No notifications yet") }}{% endif %}
+</div>
+{% endblock %}

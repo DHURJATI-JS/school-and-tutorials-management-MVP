@@ -1,0 +1,7 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1 style="margin:0 0 10px;font-size:20px;">New website enquiry</h1>
+<p><strong>{{ name }}</strong> · <a href="mailto:{{ email }}" style="color:#4f46e5;">{{ email }}</a>{% if phone %} · {{ phone }}{% endif %}</p>
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;white-space:pre-wrap;">{{ message }}</div>
+<p style="margin-top:16px;"><a href="{{ settings.BASE_URL }}/admin/inbox" style="color:#4f46e5;">Open the inbox</a></p>
+{% endblock %}

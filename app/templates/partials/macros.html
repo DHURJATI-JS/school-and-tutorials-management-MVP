@@ -1,0 +1,136 @@
+{# Reusable UI macros #}
+
+{% macro page_header(title, subtitle=None, icon=None) -%}
+<div class="cn-page-head">
+  <div>
+    {% if icon %}<span class="cn-head-icon"><i class="fa-solid {{ icon }}"></i></span>{% endif %}
+    <div><h1>{{ title }}</h1>{% if subtitle %}<p>{{ subtitle }}</p>{% endif %}</div>
+  </div>
+  <div class="cn-page-actions">{% if caller is defined %}{{ caller() }}{% endif %}</div>
+</div>
+{%- endmacro %}
+
+{% macro stat(label, value, icon, tone="primary", hint=None, href=None) -%}
+{% if href %}<a class="cn-stat cn-tone-{{ tone }}" href="{{ href }}">{% else %}<div class="cn-stat cn-tone-{{ tone }}">{% endif %}
+  <span class="cn-stat-icon"><i class="fa-solid {{ icon }}"></i></span>
+  <div class="min-w-0"><div class="cn-stat-label">{{ label }}</div><div class="cn-stat-value">{{ value }}</div>
+    {% if hint %}<div class="cn-stat-hint">{{ hint }}</div>{% endif %}</div>
+{% if href %}</a>{% else %}</div>{% endif %}
+{%- endmacro %}
+
+{% macro empty(icon, title, text="", action_url=None, action_label=None) -%}
+<div class="cn-empty">
+  <div class="cn-empty-icon"><i class="fa-solid {{ icon }}"></i></div>
+  <h3>{{ title }}</h3>{% if text %}<p class="mb-3">{{ text }}</p>{% endif %}
+  {% if action_url %}<a class="btn btn-primary" href="{{ action_url }}">{{ action_label }}</a>{% endif %}
+</div>
+{%- endmacro %}
+
+{% set STATUS = {
+  "active": "success", "paid": "success", "present": "success", "published": "success", "graded": "success",
+  "ready": "success", "completed": "success", "accepted": "success", "resolved": "success", "yes": "success",
+  "sent": "success", "pending": "warning", "scheduled": "info", "draft": "neutral", "processing": "warning",
+  "verifying": "info", "maybe": "warning", "submitted": "info", "in_progress": "warning", "generating": "info",
+  "open": "warning", "overdue": "danger", "failed": "danger", "removed": "danger", "absent": "danger",
+  "cancelled": "danger", "no": "danger", "banned": "danger", "deleted": "danger", "dismissed": "neutral", "waived": "neutral",
+  "ended": "neutral", "none": "neutral", "skipped": "neutral", "live": "live"} %}
+{% macro status(value, label=None) -%}
+<span class="cn-badge {{ STATUS.get(value, 'neutral') }}">{{ label or (value or '—')|replace('_', ' ')|capitalize }}</span>
+{%- endmacro %}
+
+{% macro level(value) -%}
+{% if value == "info" %}<span class="cn-level good"><i class="fa-solid fa-arrow-trend-up"></i>Improving</span>
+{% elif value == "warning" %}<span class="cn-level critical"><i class="fa-solid fa-circle-exclamation"></i>Warning</span>
+{% else %}<span class="cn-level warning"><i class="fa-solid fa-triangle-exclamation"></i>Needs attention</span>{% endif %}
+{%- endmacro %}
+
+{% macro avatar(u, size=38, photo=True) -%}
+{% if photo and u and u.id and u.photo_path %}<img class="cn-avatar" style="--size: {{ size }}px" src="/files/photo/{{ u.id }}" alt="" loading="lazy">
+{%- else %}<span class="cn-avatar" style="--size: {{ size }}px">{{ (u.full_name if u and u.full_name is defined else (u.name if u else '?'))|initials }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro account_badge(u) -%}
+{% if u and u.status is defined and u.status == "banned" %}<span class="cn-badge danger cn-account-badge"><i class="fa-solid fa-ban"></i>Banned</span>
+{%- elif u and u.status is defined and u.status == "deleted" %}<span class="cn-badge neutral cn-account-badge"><i class="fa-solid fa-trash-can"></i>Deleted</span>{% endif %}
+{%- endmacro %}
+
+{% macro person(u, sub=None, href=None, photo=True) -%}
+<div class="cn-person">{{ avatar(u, 38, photo) }}
+  <div class="min-w-0">{% if href %}<a class="cn-person-name" href="{{ href }}">{{ u.full_name }}</a>{% else %}<div class="cn-person-name">{{ u.full_name }}</div>{% endif %}{{ account_badge(u) }}
+    <div class="cn-person-sub text-truncate">{{ sub if sub is not none else u.role_label }}</div></div>
+</div>
+{%- endmacro %}
+
+{% macro field(name, label, type="text", value="", required=False, help=None, placeholder="", attrs="", cls="") -%}
+<div class="cn-field {{ cls }}">
+  <label class="form-label" for="f-{{ name }}">{{ label }}{% if required %} <span class="text-danger">*</span>{% endif %}</label>
+  <input class="form-control" id="f-{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value if value is not none else '' }}"
+         placeholder="{{ placeholder }}" {% if required %}required{% endif %} {{ attrs|safe }}>
+  {% if help %}<div class="form-text">{{ help }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro textarea(name, label, value="", rows=3, required=False, help=None, placeholder="", attrs="", cls="", id=None) -%}
+{% set fid = id or "f-" ~ name %}
+<div class="cn-field {{ cls }}">
+  <label class="form-label" for="{{ fid }}">{{ label }}{% if required %} <span class="text-danger">*</span>{% endif %}</label>
+  <textarea class="form-control" id="{{ fid }}" name="{{ name }}" rows="{{ rows }}" placeholder="{{ placeholder }}"
+            {% if required %}required{% endif %} {{ attrs|safe }}>{{ value if value is not none else '' }}</textarea>
+  {% if help %}<div class="form-text">{{ help }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro select(name, label, options, selected=None, required=False, help=None, empty_label=None, attrs="", cls="") -%}
+<div class="cn-field {{ cls }}">
+  <label class="form-label" for="f-{{ name }}">{{ label }}{% if required %} <span class="text-danger">*</span>{% endif %}</label>
+  <select class="form-select" id="f-{{ name }}" name="{{ name }}" {% if required %}required{% endif %} {{ attrs|safe }}>
+    {% if empty_label %}<option value="">{{ empty_label }}</option>{% endif %}
+    {% for opt in options %}{% set v = opt[0] if opt is not string else opt %}{% set l = opt[1] if opt is not string else opt %}
+    <option value="{{ v }}" {% if selected is not none and v|string == selected|string %}selected{% endif %}>{{ l }}</option>{% endfor %}
+  </select>
+  {% if help %}<div class="form-text">{{ help }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro check(name, label, checked=False, help=None, value="on", cls="", id=None) -%}
+{% set fid = id or "f-" ~ name %}
+<div class="form-check form-switch cn-field {{ cls }}">
+  <input class="form-check-input" type="checkbox" role="switch" id="{{ fid }}" name="{{ name }}" value="{{ value }}" {% if checked %}checked{% endif %}>
+  <label class="form-check-label" for="{{ fid }}">{{ label }}</label>
+  {% if help %}<div class="form-text">{{ help }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro pagination(page, pages, base) -%}
+{% if pages > 1 %}
+<nav class="d-flex justify-content-between align-items-center mt-3 px-1">
+  <span class="small text-muted">Page {{ page }} of {{ pages }}</span>
+  <div class="d-flex gap-2">
+    {% set sep = '&' if '?' in base else '?' %}
+    {% if page > 1 %}<a class="btn btn-ghost btn-sm" href="{{ base }}{{ sep|safe }}page={{ page - 1 }}"><i class="fa-solid fa-chevron-left"></i></a>{% endif %}
+    {% if page < pages %}<a class="btn btn-ghost btn-sm" href="{{ base }}{{ sep|safe }}page={{ page + 1 }}"><i class="fa-solid fa-chevron-right"></i></a>{% endif %}
+  </div>
+</nav>
+{% endif %}
+{%- endmacro %}
+
+{% macro modal(id, title, size="") -%}
+<div class="cn-modal" id="{{ id }}" aria-hidden="true">
+  <div class="cn-modal-dialog {{ size }}" role="dialog" aria-modal="true" aria-labelledby="{{ id }}-title">
+    <div class="cn-modal-head"><h3 id="{{ id }}-title">{{ title }}</h3>
+      <button type="button" class="cn-icon-btn" data-modal-close aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>
+    {{ caller() }}
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro chart(id, title, subtitle, data, type="column", fmt="num", value_label="") -%}
+<div class="cn-card cn-chart-wrap" data-chart="{{ id }}-data">
+  <div class="cn-card-head"><div><h3>{{ title }}</h3><div class="small text-muted">{{ subtitle }}</div></div>
+    <button type="button" class="btn btn-ghost btn-sm" data-chart-table aria-pressed="false">Table</button></div>
+  <script type="application/json" id="{{ id }}-data">{{ page_json({"type": type, "format": fmt, "data": data, "valueLabel": value_label}) }}</script>
+  <div class="cn-chart"><canvas aria-label="{{ title }}" role="img"></canvas>
+    <div class="cn-chart-empty cn-empty py-4" hidden><p class="mb-0">No data yet — it will appear as the institute gets going.</p></div></div>
+  <div class="cn-chart-table cn-table-wrap"></div>
+</div>
+{%- endmacro %}

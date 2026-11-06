@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Fee statement{% endblock %}
+{% block body %}
+<div class="no-print text-center my-3"><button class="btn btn-primary" type="button" data-print><i class="fa-solid fa-print me-2"></i>Print / save as PDF</button>
+  <a class="btn btn-ghost" href="/student/fees">Back</a></div>
+<div class="cn-doc">
+  <div class="cn-doc-head">
+    <div><h1 class="h3 mb-1">{{ site.site_name }}</h1><div class="small text-muted">Fee statement · generated {{ now()|dt }}</div></div>
+    <div class="text-end"><div class="fw-bold">{{ member.full_name }}</div><div class="small">{{ member.id_code }} · {{ member.class_level }}</div></div>
+  </div>
+  {% set ns = namespace(billed=0, paid=0) %}
+  <table>
+    <thead><tr><th>Month</th><th>Description</th><th>Status</th><th>Paid on</th><th style="text-align:right">Amount</th></tr></thead>
+    <tbody>{% for f in fees %}{% if f.status != "waived" %}{% set ns.billed = ns.billed + f.amount %}{% endif %}{% if f.status == "paid" %}{% set ns.paid = ns.paid + f.amount %}{% endif %}
+      <tr><td>{{ f.period }}</td><td>{{ f.title }}{% if f.batch %} · {{ f.batch.name }}{% endif %}{% if f.receipt_no %}<div class="small text-muted">{{ f.receipt_no }}</div>{% endif %}</td>
+        <td>{{ f.status|capitalize }}{% if f.gateway == "cashfree" %} · online{% endif %}</td><td>{{ f.paid_on|d if f.paid_on else "—" }}</td><td style="text-align:right">{{ f.amount|money }}</td></tr>{% endfor %}</tbody>
+    <tfoot><tr><th colspan="4">Total billed</th><th style="text-align:right">{{ ns.billed|money }}</th></tr>
+      <tr><th colspan="4">Total paid</th><th style="text-align:right">{{ ns.paid|money }}</th></tr>
+      <tr><th colspan="4">Balance due</th><th style="text-align:right">{{ (ns.billed - ns.paid)|money }}</th></tr></tfoot>
+  </table>
+</div>
+{% endblock %}

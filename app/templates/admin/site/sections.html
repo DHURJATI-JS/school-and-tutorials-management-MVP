@@ -1,0 +1,39 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Home page builder{% endblock %}
+{% block content %}
+{% call ui.page_header("Home page builder", "Drag sections to reorder, edit content like WordPress, and hide what you don't need.", "fa-house-chimney-window") %}
+  <a class="btn btn-ghost" href="/" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square me-2"></i>Preview</a>
+  <div class="cn-dropdown">
+    <button class="btn btn-primary" type="button" data-dropdown-toggle><i class="fa-solid fa-plus me-2"></i>Add section</button>
+    <div class="cn-menu">{% for key, meta in kinds.items() %}<a href="/admin/site/sections/new?kind={{ key }}"><i class="fa-solid {{ meta.icon }}"></i>{{ meta.label }}</a>{% endfor %}</div>
+  </div>
+{% endcall %}
+<div class="cn-card flush">
+  {% if sections %}
+  <ul class="cn-list px-3" data-sortable>
+    {% for s in sections %}
+    <li data-id="{{ s.id }}">
+      <span class="cn-icon-btn" data-handle title="Drag to reorder" style="cursor:grab"><i class="fa-solid fa-grip-vertical"></i></span>
+      <span class="cn-head-icon" style="width:40px;height:40px"><i class="fa-solid {{ kinds[s.kind].icon if s.kind in kinds else 'fa-square' }}"></i></span>
+      <div class="flex-grow-1 min-w-0">
+        <div class="fw-bold text-truncate">{{ s.title or "(untitled " ~ (kinds[s.kind].label if s.kind in kinds else s.kind) ~ ")" }}</div>
+        <div class="small text-muted">{{ kinds[s.kind].label if s.kind in kinds else s.kind }}{% if s.data and s.data.get('items') %} · {{ s.data['items']|length }} items{% endif %}</div>
+      </div>
+      {{ ui.status("active" if s.is_visible else "none", "Visible" if s.is_visible else "Hidden") }}
+      <div class="cn-actions">
+        <form method="post" action="/admin/site/sections/{{ s.id }}/toggle">{{ csrf_field() }}<button class="btn btn-ghost btn-sm" type="submit" title="Show / hide"><i class="fa-solid {{ 'fa-eye-slash' if s.is_visible else 'fa-eye' }}"></i></button></form>
+        <a class="btn btn-soft btn-sm" href="/admin/site/sections/{{ s.id }}"><i class="fa-solid fa-pen me-1"></i>Edit</a>
+        <form method="post" action="/admin/site/sections/{{ s.id }}/delete" data-confirm="Delete this section from the home page?">{{ csrf_field() }}<button class="btn btn-soft-danger btn-sm" type="submit" title="Delete"><i class="fa-solid fa-trash-can"></i></button></form>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}{{ ui.empty("fa-layer-group", "No sections yet", "Add a hero, features or contact section to build your home page.") }}{% endif %}
+</div>
+<p class="small text-muted mt-3"><i class="fa-solid fa-circle-info me-1"></i>Contact details default to the values in <code>.env</code> (CONTACT_EMAIL, CONTACT_WHATSAPP). Override them in <a href="/admin/site/branding">Branding</a>.</p>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js" integrity="sha384-/jkFGhPVLS9HIUzX09xB5W3coE5q1X5NXZA/PuOAdOaRxUPczlZmKzYEq9QcJnW0" crossorigin="anonymous" defer></script>
+<script src="{{ asset('js/builder.js') }}" defer></script>
+{% endblock %}

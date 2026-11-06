@@ -1,0 +1,34 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ meeting.title }}{% endblock %}
+{% block content %}
+{% call ui.page_header(meeting.title, (meeting.batch.name if meeting.batch else "Parent-teacher meeting") ~ " · host " ~ meeting.host_name ~ " · " ~ (meeting.duration_seconds|duration), "fa-video") %}
+  {{ ui.status(meeting.status) }}
+  {% if meeting.status == "ended" %}<form method="post" action="/admin/meetings/{{ meeting.id }}/regenerate-notes">{{ csrf_field() }}<button class="btn btn-ghost" type="submit"><i class="fa-solid fa-rotate me-2"></i>Regenerate AI notes</button></form>{% endif %}
+  {% if meeting.status in ("live", "scheduled") %}<a class="btn btn-primary" href="/meet/{{ meeting.code }}">Open room</a>{% endif %}
+{% endcall %}
+<div class="cn-grid" style="grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr)">
+  <div>
+    {% if meeting.recording_path %}<div class="cn-card"><div class="cn-card-head"><h3>Recording</h3><span class="small text-muted">{{ meeting.recording_bytes|filesize }}</span></div>
+      <div class="cn-player"><video controls preload="metadata" src="/files/recording/{{ meeting.id }}"></video></div></div>{% endif %}
+    <div class="cn-card"><div class="cn-card-head"><h3><i class="fa-solid fa-wand-magic-sparkles me-2 text-muted"></i>AI class notes</h3>
+      {{ ui.status(meeting.notes_status, {"ready": "Ready", "pending": "Generating…", "none": "Not started", "failed": "Failed"}.get(meeting.notes_status)) }}</div>
+      {% if meeting.ai_notes %}{% if meeting.notes_source == "fallback" %}<div class="cn-callout warning"><i class="fa-solid fa-plug-circle-exclamation"></i><div class="small">Generated without AI (the AI server was offline). Use “Regenerate AI notes” once it's back.</div></div>{% endif %}
+        <div class="cn-rich">{{ meeting.ai_notes|markdown }}</div>
+      {% else %}<p class="text-muted mb-0">Notes appear here a minute after the meeting ends.</p>{% endif %}</div>
+    {% if meeting.transcript %}<div class="cn-card"><details><summary class="fw-bold">Transcript ({{ meeting.transcript|length }} characters)</summary>
+      <pre class="small mt-3" style="white-space: pre-wrap; max-height: 420px; overflow-y: auto">{{ meeting.transcript }}</pre></details></div>{% endif %}
+  </div>
+  <div>
+    <div class="cn-card"><div class="cn-card-head"><h3>Attendance</h3></div>
+      {% for name, status, detail in attendance %}<div class="d-flex justify-content-between py-2 border-bottom small"><span class="fw-semibold">{{ name }}</span><span>{{ ui.status(status) }} <span class="text-muted">{{ detail }}</span></span></div>
+      {% else %}<p class="text-muted small mb-0">Calculated when the meeting ends ({{ (settings.MEETING_ATTENDANCE_RATIO * 100)|int }}% of the class = present).</p>{% endfor %}</div>
+    <div class="cn-card"><div class="cn-card-head"><h3>Participants</h3></div>
+      {% for p in participants %}<div class="d-flex justify-content-between py-2 border-bottom small"><span><span class="fw-semibold">{{ p.display_name }}</span> <span class="text-muted">· {{ p.role }}</span></span><span class="tabular">{{ p.total_seconds|duration }}</span></div>
+      {% else %}<p class="text-muted small mb-0">Nobody joined yet.</p>{% endfor %}</div>
+    <div class="cn-card"><div class="cn-card-head"><h3>Chat</h3></div>
+      <div style="max-height: 360px; overflow-y: auto">{% for c in chat %}<div class="small py-1"><strong>{{ c.sender_name }}:</strong> {{ c.text }}{% if c.flagged %} <span class="cn-badge warning">filtered</span>{% endif %}</div>
+      {% else %}<p class="text-muted small mb-0">No chat messages.</p>{% endfor %}</div></div>
+  </div>
+</div>
+{% endblock %}

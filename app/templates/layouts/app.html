@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block body_class %}cn-app-body{% endblock %}
+{% block body %}
+<div class="cn-app">
+  <aside class="cn-sidebar" id="cn-sidebar" aria-label="Main navigation">
+    <a class="cn-brand" href="{{ user.home_url }}">
+      {% if site.logo_url %}<img src="{{ site.logo_url }}" alt="">{% else %}<span class="cn-logo-mark"><i class="fa-solid fa-feather-pointed"></i></span>{% endif %}
+      <span>{{ site.site_name }}</span>
+    </a>
+    <nav class="cn-nav">{% include "partials/nav.html" %}</nav>
+    <div class="cn-sidebar-foot">
+      <a class="cn-ai-pill" href="{{ '/admin/ai' if user.kind == 'admin' else '#' }}" title="Local AI status">
+        <span class="cn-led"></span><span>Local AI · Gemma</span>
+      </a>
+    </div>
+  </aside>
+  <div class="cn-scrim" data-sidebar-close></div>
+  <div class="cn-main">
+    <header class="cn-topbar">
+      <button class="cn-icon-btn d-lg-none" type="button" data-sidebar-toggle aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>
+      <div class="cn-topbar-title">{% block crumb %}{{ self.title() }}{% endblock %}</div>
+      <div class="cn-topbar-actions">
+        <a class="cn-icon-btn d-none d-sm-inline-grid" href="/" title="View website" aria-label="View website"><i class="fa-solid fa-globe"></i></a>
+        <button class="cn-icon-btn" type="button" data-theme-toggle aria-label="Toggle light / dark mode" title="Light / dark mode"><i class="fa-solid fa-moon"></i></button>
+        {% if user.id %}
+        <div class="cn-dropdown" data-notif>
+          <button class="cn-icon-btn" type="button" data-dropdown-toggle aria-label="Notifications"><i class="fa-solid fa-bell"></i><span class="cn-dot" hidden>0</span></button>
+          <div class="cn-menu">
+            <div class="cn-menu-head d-flex justify-content-between align-items-center"><strong>Notifications</strong>
+              <a href="#" class="small" data-notif-read>Mark all read</a></div>
+            <div class="cn-notif-list" data-notif-list></div>
+            <a class="small d-block text-center p-2" href="/notifications">See all</a>
+          </div>
+        </div>
+        {% endif %}
+        <div class="cn-dropdown">
+          <button class="cn-icon-btn" type="button" data-dropdown-toggle aria-label="Account" style="width:auto;padding:0 10px 0 4px;gap:8px;display:inline-flex;align-items:center">
+            {% if user.id and user.user and user.user.photo_path %}<img class="cn-avatar" style="--size:30px" src="/files/photo/{{ user.id }}" alt="">{% else %}<span class="cn-avatar" style="--size:30px">{{ user.initials }}</span>{% endif %}
+            <span class="d-none d-md-inline fw-semibold small">{{ user.name.split()[0] }}</span><i class="fa-solid fa-chevron-down small text-muted"></i>
+          </button>
+          <div class="cn-menu">
+            <div class="cn-menu-head"><div class="fw-bold">{{ user.name }}</div><div class="small text-muted">{{ user.user.role_label if user.user else 'Administrator' }}</div></div>
+            {% if user.kind == "student" %}<a href="/student/profile"><i class="fa-solid fa-id-card"></i>Profile & ID card</a>{% elif user.kind == "staff" %}<a href="/staff/profile"><i class="fa-solid fa-id-card"></i>Profile & ID card</a>{% endif %}
+            <a href="/p/terms"><i class="fa-solid fa-scale-balanced"></i>Terms</a>
+            <form method="post" action="/logout">{{ csrf_field() }}<button class="cn-menu-item" type="submit"><i class="fa-solid fa-right-from-bracket"></i>Sign out</button></form>
+          </div>
+        </div>
+      </div>
+    </header>
+    <main class="cn-content" id="main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}

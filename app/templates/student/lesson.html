@@ -1,0 +1,63 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ lesson.title }}{% endblock %}
+{% block content %}
+{% set m = lesson.meeting %}{% set v = lesson.video %}
+{% call ui.page_header(lesson.title, lesson.batch.name ~ " · " ~ lesson.date|d('%A %d %b') ~ " · " ~ lesson.start_time|t, "fa-chalkboard-user") %}
+  {% if mark %}{{ ui.status(mark.status, "Attendance: " ~ mark.status) }}{% endif %}
+  <a class="btn btn-ghost" href="/student/classes"><i class="fa-solid fa-arrow-left me-2"></i>Classes</a>
+{% endcall %}
+<div class="cn-grid" style="grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr)">
+  <div>
+    {% if v %}
+    <div class="cn-player">
+      <video controls playsinline preload="metadata" data-track="/api/videos/{{ v.id }}/progress" data-resume="{{ progress.last_position if progress else 0 }}"
+             data-marked="{{ '1' if progress and progress.attendance_marked else '0' }}" src="{{ '/files/video/' ~ v.id if v.file_path else v.external_url }}"></video>
+    </div>
+    {% set pct = ((progress.watched_seconds * 100 / v.duration_seconds)|round|int) if progress and v.duration_seconds else 0 %}
+    <div class="cn-watch"><div class="cn-meter flex-grow-1" data-watch-meter><span style="width: {{ [pct, 100]|min }}%"></span></div>
+      <span class="small fw-semibold" data-watch-label>{{ "✅ Attendance marked" if progress and progress.attendance_marked else "Watched " ~ pct ~ "% · attendance is marked at " ~ threshold ~ "%" }}</span></div>
+    {% elif m and m.status in ("live", "scheduled") %}
+    <div class="cn-card text-center py-5">
+      <div class="cn-empty-icon mx-auto mb-3"><i class="fa-solid fa-video"></i></div>
+      <h3>{{ "This class is live now!" if m.status == "live" else "Live class" }}</h3>
+      <p class="text-muted">{{ "Join now — attend the whole class to be marked present." if m.status == "live" else "Join when your teacher starts the class. You can open the room early." }}</p>
+      <a class="btn {{ 'btn-danger' if m.status == 'live' else 'btn-primary' }} btn-lg" href="/meet/{{ m.code }}"><i class="fa-solid fa-video me-2"></i>{{ "Join live class" if m.status == "live" else "Open class room" }}</a>
+    </div>
+    {% else %}<div class="cn-card">{{ ui.empty("fa-hourglass-half", "The recording isn't ready yet", "It appears here a few minutes after the live class ends.") }}</div>{% endif %}
+
+    {% if m and m.ai_notes %}
+    <div class="cn-card mt-3"><div class="cn-card-head"><h3><i class="fa-solid fa-wand-magic-sparkles me-2 text-muted"></i>AI class notes</h3>
+      {% if m.notes_source == "fallback" %}<span class="cn-badge warning">Auto-summary</span>{% endif %}</div><div class="cn-rich">{{ m.ai_notes|markdown }}</div></div>
+    {% elif v and v.notes %}
+    <div class="cn-card mt-3"><div class="cn-card-head"><h3>Lesson notes</h3></div><div class="cn-rich">{{ v.notes|nl2p }}</div></div>
+    {% endif %}
+    {% if lesson.description %}<div class="cn-card mt-3"><div class="small">{{ lesson.description|nl2p }}</div></div>{% endif %}
+    {% if v %}{% include "partials/comments.html" %}{% endif %}
+  </div>
+
+  <div class="cn-card flush cn-chat" data-tutor data-batch="{{ lesson.batch_id }}" data-lesson="{{ lesson.id }}" style="height: calc(100vh - 170px); position: sticky; top: 84px">
+    <div class="cn-card-head p-3 mb-0 border-bottom"><div><h3><i class="fa-solid fa-robot me-2"></i>Ask about this class</h3>
+      <div class="small text-muted">Answers come from this class's notes{{ " and video" if v }}.</div></div></div>
+    <div class="cn-chat-log" data-log>
+      {% for d in history %}
+      <div class="cn-msg mine"><div class="cn-bubble">{% if d.image_path %}<img class="cn-frame" src="/files/doubt/{{ d.id }}" alt="Video frame">{% endif %}{{ d.question }}</div>
+        <div class="cn-meta">{{ ("📸 " ~ d.timestamp_label) if d.timestamp_label else "You" }}</div></div>
+      <div class="cn-msg ai"><div class="cn-bubble">{{ d.answer|markdown }}</div><div class="cn-meta">{{ "Teacher replied" if d.answered_by == "teacher" else ("Offline answer · sent to teacher" if d.answered_by == "fallback" else "AI tutor") }}</div></div>
+      {% else %}<div class="cn-msg ai"><div class="cn-bubble">Hi {{ user.name.split()[0] }}! 👋 Ask me anything about this class.{% if v %} Pause the video and tap <strong>📸 Ask about this moment</strong> to ask about what's on screen.{% endif %}</div></div>{% endfor %}
+    </div>
+    <div class="cn-frame-chip" data-frame-chip hidden><img alt="Captured frame"><span class="small flex-grow-1" data-frame-label></span>
+      <button class="btn btn-ghost btn-sm" type="button" data-frame-clear aria-label="Remove screenshot"><i class="fa-solid fa-xmark"></i></button></div>
+    <form class="cn-chat-input" data-ajax>
+      {% if v %}<button class="btn btn-soft" type="button" data-frame title="Screenshot the current video moment and ask about it"><i class="fa-solid fa-camera"></i></button>{% endif %}
+      <textarea class="form-control" rows="1" placeholder="Type your doubt… (Enter to send)" maxlength="1500" aria-label="Your question"></textarea>
+      <button class="btn btn-primary" type="submit" aria-label="Send"><i class="fa-solid fa-paper-plane"></i></button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ asset('js/video.js') }}" defer></script>
+<script src="{{ asset('js/tutor.js') }}" defer></script>
+{% if lesson.video %}<script src="{{ asset('js/comments.js') }}" defer></script>{% endif %}{# `v` is local to the content block #}
+{% endblock %}

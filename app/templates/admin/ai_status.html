@@ -1,0 +1,59 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}AI & services{% endblock %}
+{% block content %}
+{% call ui.page_header("AI & services", "Health of the AI model, OCR service and email delivery.", "fa-microchip") %}
+  <a class="btn btn-ghost" href="/admin/ai"><i class="fa-solid fa-rotate me-2"></i>Re-check</a>
+{% endcall %}
+<div class="cn-grid cols-3 mb-4">
+  {{ ui.stat("AI model", "Online" if ai.reachable else "Offline", "fa-microchip", "success" if ai.reachable else "danger", hint=(ai.ping_ms ~ " ms") if ai.ping_ms is defined else ai.get("error")) }}
+  {{ ui.stat("OCR (Tesseract)", "Online" if ocr.reachable else "Offline", "fa-id-card", "success" if ocr.reachable else "danger", hint=ocr.get("tesseract") or ocr.get("error")) }}
+  {{ ui.stat("Email (SMTP)", "Enabled" if smtp.enabled else "Disabled", "fa-envelope", "success" if smtp.enabled else "warning", hint=smtp.host ~ ":" ~ smtp.port) }}
+</div>
+<div class="cn-grid cols-2">
+  <div class="cn-card">
+    <div class="cn-card-head"><h3>{{ ai.provider or "AI model" }}</h3><span class="cn-badge {{ 'success' if ai.circuit == 'closed' else 'danger' }}">Circuit {{ ai.circuit }}</span></div>
+    <table class="cn-table"><tbody>
+      <tr><td>Base URL</td><td><code>{{ ai.base_url }}</code></td></tr>
+      {% if ai.effort %}<tr><td>Effort</td><td>{{ ai.effort }}{% if ai.context_window %} · context {{ "{:,}".format(ai.context_window) }} tokens{% endif %}</td></tr>{% endif %}
+      <tr><td>Model</td><td>{{ ai.configured_model }} → <strong>{{ ai.resolved_model or "not resolved yet" }}</strong></td></tr>
+      <tr><td>Available models</td><td class="small">{{ ai.models|join(", ") or "—" }}</td></tr>
+      <tr><td>Capabilities</td><td class="small">system role: {{ "yes" if ai.supports_system else "merged into user" }} · JSON mode: {{ "yes" if ai.supports_json_mode else "prompt-only" }} · vision: {{ "yes" if ai.supports_vision else "OCR fallback" }}</td></tr>
+      <tr><td>Embeddings</td><td class="small">{{ ai.embedding_model }}</td></tr>
+      <tr><td>Speech-to-text</td><td class="small">{{ ai.transcribe_model }}</td></tr>
+      <tr><td>Calls</td><td class="small">{{ ai.calls }} total · {{ ai.failed_calls }} failed{% if ai.last_latency_ms %} · last {{ ai.last_latency_ms }} ms{% endif %}</td></tr>
+      {% if ai.last_error %}<tr><td>Last error</td><td class="small text-danger">{{ ai.last_error }}</td></tr>{% endif %}
+    </tbody></table>
+    <div class="cn-callout info mt-3 mb-0"><i class="fa-solid fa-shield-heart"></i><div class="small"><strong>Fail-safes:</strong> retries with back-off, a circuit breaker that pauses AI after repeated failures, deterministic fallbacks for tests, notes, grading and doubts, and output filtering.</div></div>
+  </div>
+  <div class="cn-card">
+    <div class="cn-card-head"><h3>Try a prompt</h3></div>
+    <form id="prompt-form" data-ajax>
+      <textarea class="form-control mb-2" name="prompt" rows="3" placeholder="e.g. Explain photosynthesis to a Class 7 student in 3 lines."></textarea>
+      <button class="btn btn-primary" type="submit">Send</button>
+    </form>
+    <div class="cn-rich small mt-3" id="prompt-out"></div>
+    <hr>
+    <h3 class="h6">Email</h3>
+    <p class="small text-muted mb-2">From {{ smtp.from }} via {{ smtp.host }}:{{ smtp.port }} ({{ smtp.tls }}, user {{ smtp.user }}) · SMS provider: {{ sms }}</p>
+    <form method="post" action="/admin/ai/test-email">{{ csrf_field() }}<button class="btn btn-ghost btn-sm" type="submit"><i class="fa-solid fa-vial me-2"></i>Send test email to admins</button></form>
+    <hr>
+    <h3 class="h6">Knowledge base</h3>
+    <p class="small mb-0">{% for k, v in chunks.items() %}{{ k }}: <strong>{{ v }}</strong>{{ " · " if not loop.last }}{% else %}No chunks indexed yet.{% endfor %}</p>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+document.addEventListener("DOMContentLoaded", function () {
+  var f = document.getElementById("prompt-form"), out = document.getElementById("prompt-out");
+  f.addEventListener("submit", async function (e) {
+    e.preventDefault(); var btn = f.querySelector("button"); var p = f.prompt.value.trim(); if (!p) return;
+    CN.busy(btn, true, "Asking…"); out.textContent = "";
+    try { var r = await CN.api("/admin/ai/test-prompt", { json: { prompt: p } });
+      out.textContent = r.ok ? (r.answer + "\n\n— " + r.model + " · " + r.ms + " ms") : ("AI unavailable: " + r.error + " (circuit " + r.circuit + ")"); }
+    catch (err) { out.textContent = err.message; } finally { CN.busy(btn, false); }
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Messages{% endblock %}
+{% block content %}
+{% call ui.page_header("Messages", "Send formal notices to students, parents and staff by email (and SMS if configured).", "fa-paper-plane") %}
+  <a class="btn btn-ghost" href="/admin/directory"><i class="fa-solid fa-address-book me-2"></i>Directory</a>
+  <a class="btn btn-ghost" href="/admin/ptm"><i class="fa-solid fa-people-roof me-2"></i>PTMs</a>
+{% endcall %}
+<div class="cn-grid" style="grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr)">
+  <form class="cn-card" method="post" action="/admin/comms/send" id="compose">
+    {{ csrf_field() }}
+    <h3 class="h6">Audience</h3>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      {% for v, l in [("all_students", "All students"), ("all_parents", "All parents"), ("all_staff", "All staff")] %}
+      <label class="cn-chip" style="cursor:pointer"><input class="form-check-input me-1" type="checkbox" name="audience" value="{{ v }}">{{ l }}</label>{% endfor %}
+    </div>
+    <div class="cn-form-grid">
+      <div class="cn-field"><label class="form-label">Students of batches</label><select class="form-select" name="batch_students" multiple size="4">{% for b in batches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select></div>
+      <div class="cn-field"><label class="form-label">Parents of batches</label><select class="form-select" name="batch_parents" multiple size="4">{% for b in batches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select></div>
+      <div class="cn-field"><label class="form-label">Staff by role</label><select class="form-select" name="staff_roles" multiple size="4">{% for k, v in roles.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+      {{ ui.textarea("extra_emails", "Extra email addresses", rows=3, placeholder="comma separated") }}
+    </div>
+    <h3 class="h6 mt-2">Message</h3>
+    <div class="cn-field"><label class="form-label">Start from a template</label><select class="form-select" id="tpl-select">
+      <option value="">— Blank —</option>{% for key, t in templates.items() %}<option value="{{ key }}" data-subject="{{ t[0] }}" data-body="{{ t[1] }}">{{ t[0] }}</option>{% endfor %}</select></div>
+    {{ ui.field("subject", "Subject", required=True) }}
+    {{ ui.textarea("body", "Message", rows=9, required=True, help="Use {name} to personalise. Sent inside your branded email template.") }}
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <button class="btn btn-soft" type="button" id="polish-btn"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Polish with AI</button>
+      {% if sms_enabled %}{{ ui.check("sms", "Also send a short SMS") }}{% endif %}
+      <button class="btn btn-primary ms-auto" type="submit" data-loading="Queuing…"><i class="fa-solid fa-paper-plane me-2"></i>Send</button>
+    </div>
+  </form>
+  <div class="cn-card flush">
+    <div class="cn-card-head"><h3>Sent</h3></div>
+    <ul class="cn-list px-3">{% for c in history %}<li class="align-items-start"><span class="cn-head-icon" style="width:36px;height:36px"><i class="fa-solid fa-envelope"></i></span>
+      <div class="flex-grow-1 min-w-0"><div class="fw-bold text-truncate">{{ c.subject }}</div><div class="small text-muted">{{ c.recipients }} recipients · {{ c.audience }} · {{ c.created_at|timeago }}</div></div></li>
+      {% else %}<li class="text-muted small">Nothing sent yet.</li>{% endfor %}</ul>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+document.addEventListener("DOMContentLoaded", function () {
+  var form = document.getElementById("compose"), sel = document.getElementById("tpl-select"), btn = document.getElementById("polish-btn");
+  sel.addEventListener("change", function () { var o = sel.selectedOptions[0]; if (!o.value) return; form.subject.value = o.dataset.subject; form.body.value = o.dataset.body; });
+  btn.addEventListener("click", async function () {
+    if (!form.body.value.trim()) { CN.toast("Write a draft first.", "info"); return; }
+    CN.busy(btn, true, "Polishing…");
+    try {
+      var r = await CN.api("/admin/comms/polish", { json: { subject: form.subject.value, body: form.body.value } });
+      if (r.ok) { form.subject.value = r.subject; form.body.value = r.body; CN.toast("Polished ✨ — review before sending.", "success"); }
+      else CN.toast(r.error, "warning", 8000);
+    } catch (e) { CN.toast(e.message, "danger"); } finally { CN.busy(btn, false); }
+  });
+});
+</script>
+{% endblock %}

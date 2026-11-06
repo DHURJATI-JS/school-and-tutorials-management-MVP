@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Enter your code{% endblock %}
+{% block body %}
+<div class="cn-lobby" style="background: radial-gradient(circle at 15% 10%, color-mix(in srgb, var(--cn-primary) 25%, transparent), var(--cn-bg) 60%)">
+  <div class="cn-card" style="width:min(460px,100%)">
+    <div class="text-center mb-3">
+      <span class="cn-head-icon mx-auto mb-3" style="width:64px;height:64px;font-size:1.5rem"><i class="fa-solid fa-shield-halved"></i></span>
+      <h1 class="h3">Check your messages</h1>
+      <p class="text-muted mb-0">We sent a {{ length }}-digit code to <strong>{{ email }}</strong> and <strong>{{ phone }}</strong>.</p>
+    </div>
+    <form method="post" action="/login/otp">
+      {{ csrf_field() }}
+      <input class="form-control text-center my-3" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*"
+             maxlength="{{ length }}" required autofocus placeholder="••••••" style="font-size:2rem;letter-spacing:.5em;font-weight:800;height:70px">
+      <button class="btn btn-primary w-100" type="submit" data-loading="Verifying…">Verify & sign in</button>
+    </form>
+    <form method="post" action="/login/otp/resend" class="text-center mt-3">
+      {{ csrf_field() }}
+      <button class="btn btn-link btn-sm" type="submit">Didn't get it? Send a new code</button>
+      <div class="small text-muted">You can request a new code every {{ resend_seconds }} seconds. Never share this code.</div>
+    </form>
+    <div class="text-center mt-3"><a class="small" href="/login">Use a different sign-in method</a></div>
+  </div>
+</div>
+{% endblock %}

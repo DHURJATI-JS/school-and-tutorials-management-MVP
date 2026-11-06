@@ -1,0 +1,26 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}AI doubt solver{% endblock %}
+{% block content %}
+{% call ui.page_header("AI doubt solver", "Ask about anything you're learning — answers are grounded in your batch's class notes.", "fa-robot") %}
+  {% if batches %}<form method="get"><select class="form-select" name="batch" data-autosubmit aria-label="Batch">{% for b in batches %}<option value="{{ b.id }}" {{ 'selected' if selected and b.id == selected.id }}>{{ b.name }}</option>{% endfor %}</select></form>{% endif %}
+{% endcall %}
+{% if selected %}
+<div class="cn-card flush cn-chat" data-tutor data-batch="{{ selected.id }}">
+  <div class="cn-chat-log" data-log>
+    {% for d in history %}
+    <div class="cn-msg mine"><div class="cn-bubble">{{ d.question }}</div><div class="cn-meta">You · {{ d.created_at|timeago }}</div></div>
+    <div class="cn-msg ai"><div class="cn-bubble">{{ d.answer|markdown }}</div><div class="cn-meta">{{ "Teacher replied" if d.answered_by == "teacher" else ("Offline answer · sent to your teacher" if d.answered_by == "fallback" else "AI tutor") }}</div></div>
+    {% else %}
+    <div class="cn-msg ai"><div class="cn-bubble">Hi {{ user.name.split()[0] }}! I'm your {{ selected.subject }} tutor for {{ selected.class_level }}. Ask me to explain a concept, check your working or quiz you. 🙂</div></div>
+    {% endfor %}
+  </div>
+  <form class="cn-chat-input" data-ajax>
+    <textarea class="form-control" rows="1" placeholder="e.g. Why does ice float on water?" maxlength="1500" aria-label="Your question"></textarea>
+    <button class="btn btn-primary" type="submit" aria-label="Send"><i class="fa-solid fa-paper-plane"></i></button>
+  </form>
+</div>
+<p class="small text-muted mt-2"><i class="fa-solid fa-shield-halved me-1"></i>Please be respectful — abusive language is filtered and repeated abuse leads to an automatic block.</p>
+{% else %}<div class="cn-card">{{ ui.empty("fa-robot", "You're not in a batch yet", "The AI tutor becomes available once you're enrolled in a batch.") }}</div>{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{{ asset('js/tutor.js') }}" defer></script>{% endblock %}

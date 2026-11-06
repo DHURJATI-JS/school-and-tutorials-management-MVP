@@ -1,0 +1,99 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+{% set hour = now().hour %}
+{% set greeting = "morning" if hour < 12 else ("afternoon" if hour < 17 else "evening") %}
+{% call ui.page_header("Good " ~ greeting ~ ", " ~ user.name.split()[0] ~ " 👋", "Here's what's happening at " ~ site.site_name ~ " today.", "fa-gauge-high") %}
+  <a class="btn btn-ghost" href="/admin/lessons/new"><i class="fa-solid fa-plus me-2"></i>Schedule class</a>
+  <a class="btn btn-primary" href="/admin/tests/generate"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Generate test</a>
+{% endcall %}
+
+{% if weak_password %}
+<div class="cn-callout danger"><i class="fa-solid fa-shield-halved"></i>
+  <div><strong>Your admin password is weak.</strong> It is short, common or the same as your username - anyone who
+    guesses it controls every student record. Set a strong one in <code>.env</code> → <code>ADMIN_USERS</code>
+    (ideally a bcrypt hash: <code>python -m app.cli hash-password</code>) and restart.</div></div>
+{% endif %}
+{% if ai_state == "open" %}
+<div class="cn-callout warning"><i class="fa-solid fa-plug-circle-exclamation"></i>
+  <div><strong>The AI server is not responding.</strong> Fail-safes are active: tests use starter templates, notes use extractive summaries and doubts go to teachers.
+    <span class="text-muted">({{ ai_error }})</span> <a href="/admin/ai">Check AI status</a></div></div>
+{% endif %}
+{% if stats.proofs or stats.reports %}
+<div class="cn-callout info"><i class="fa-solid fa-bell"></i><div>
+  {% if stats.proofs %}<a href="/admin/fees?status=verifying"><strong>{{ stats.proofs }}</strong> payment proof(s)</a> waiting for verification. {% endif %}
+  {% if stats.reports %}<a href="/admin/reports"><strong>{{ stats.reports }}</strong> open report(s)</a> need your review.{% endif %}
+</div></div>
+{% endif %}
+
+<div class="cn-grid cols-4 mb-4">
+  {{ ui.stat("Active students", stats.students, "fa-user-graduate", "primary", href="/admin/students") }}
+  {{ ui.stat("Staff members", stats.staff, "fa-id-badge", "violet", href="/admin/staff") }}
+  {{ ui.stat("Active batches", stats.batches ~ " / " ~ settings.MAX_BATCHES, "fa-layer-group", "accent", href="/admin/batches") }}
+  {{ ui.stat("Classes today", stats.classes_today, "fa-chalkboard-user", "info", hint=(stats.live ~ " live right now") if stats.live else "No live class right now", href="/admin/lessons") }}
+  {{ ui.stat("Collected this month", stats.collected|money, "fa-indian-rupee-sign", "success", href="/admin/fees?status=paid") }}
+  {{ ui.stat("Fees outstanding", stats.pending|money, "fa-hourglass-half", "warning", href="/admin/fees?status=pending") }}
+  {{ ui.stat("Open AI insights", stats.alerts, "fa-wand-magic-sparkles", "danger" if stats.alerts else "success", href="/admin/insights") }}
+  {{ ui.stat("New enquiries", stats.inbox, "fa-inbox", "info", href="/admin/inbox") }}
+</div>
+
+<div class="cn-grid cols-3 mb-4">
+  {{ ui.chart("fees", "Fees collected", "Last 6 months", charts.fees, "column", "inr", "collected") }}
+  {{ ui.chart("attendance", "Attendance rate", "Last 14 days · students marked present", charts.attendance, "line", "pct", "present") }}
+  {{ ui.chart("scores", "Average test score by batch", "All graded attempts, highest first", charts.scores, "hbar", "pct", "average") }}
+</div>
+
+<div class="cn-grid cols-2">
+  <div class="cn-card">
+    <div class="cn-card-head"><h3><i class="fa-solid fa-calendar-week me-2 text-muted"></i>Next 7 days</h3><a class="btn btn-ghost btn-sm" href="/admin/lessons">All classes</a></div>
+    {% if upcoming %}
+    <ul class="cn-list">
+      {% for l in upcoming %}
+      {% set held = l.meeting and l.meeting.status in ("live", "ended") %}
+      <li>
+        <span class="cn-color-dot" style="background: {{ l.batch.color }}"></span>
+        <div class="flex-grow-1 min-w-0"><a class="fw-bold" href="/admin/lessons/{{ l.id }}">{{ l.title }}</a>
+          <div class="small text-muted">{{ l.batch.name }} · {{ l.date|d('%a %d %b') }} · {{ l.start_time|t }}</div></div>
+        {% if l.video %}<span class="cn-badge success"><i class="fa-solid fa-film"></i>Video</span>
+        {% elif l.meeting and l.meeting.status == "live" %}<span class="cn-badge live">Live</span>
+        {% elif not held %}<span class="cn-badge warning" title="No pre-recorded video: a live class is mandatory"><i class="fa-solid fa-video"></i>Live class required</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}{{ ui.empty("fa-calendar-plus", "Nothing scheduled", "Schedule a live or recorded class for a batch.", "/admin/lessons/new", "Schedule class") }}{% endif %}
+  </div>
+  <div class="cn-card">
+    <div class="cn-card-head"><h3><i class="fa-solid fa-wand-magic-sparkles me-2 text-muted"></i>AI insights</h3><a class="btn btn-ghost btn-sm" href="/admin/insights">View all</a></div>
+    {% if alerts %}
+    <ul class="cn-list">
+      {% for a in alerts %}
+      <li class="align-items-start">{{ ui.avatar(a.user, 34) }}
+        <div class="flex-grow-1 min-w-0"><div class="fw-bold">{{ a.title }}</div><div class="small text-muted text-truncate">{{ a.message }}</div></div>
+        {{ ui.level(a.level) }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}{{ ui.empty("fa-face-smile", "No concerns right now", "The AI checks scores, attendance and submissions every day.") }}{% endif %}
+  </div>
+  <div class="cn-card">
+    <div class="cn-card-head"><h3><i class="fa-solid fa-video me-2 text-muted"></i>Live now</h3><a class="btn btn-ghost btn-sm" href="/admin/meetings">Meetings</a></div>
+    {% if live %}
+    <ul class="cn-list">{% for m in live %}<li><span class="cn-badge live">Live</span><div class="flex-grow-1"><div class="fw-bold">{{ m.title }}</div>
+      <div class="small text-muted">{{ m.batch.name if m.batch else "PTM" }} · started {{ m.started_at|timeago }}</div></div>
+      <a class="btn btn-soft btn-sm" href="/meet/{{ m.code }}">Join</a></li>{% endfor %}</ul>
+    {% else %}{{ ui.empty("fa-video-slash", "No live classes", "Start an instant class for any batch from Live meetings.") }}{% endif %}
+  </div>
+  <div class="cn-card">
+    <div class="cn-card-head"><h3><i class="fa-solid fa-inbox me-2 text-muted"></i>Latest enquiries</h3><a class="btn btn-ghost btn-sm" href="/admin/inbox">Inbox</a></div>
+    {% if inbox %}
+    <ul class="cn-list">{% for m in inbox %}<li class="align-items-start"><span class="cn-avatar" style="--size:34px">{{ m.name|initials }}</span>
+      <div class="flex-grow-1 min-w-0"><div class="fw-bold">{{ m.name }} {% if not m.is_read %}<span class="cn-badge primary ms-1">New</span>{% endif %}</div>
+        <div class="small text-muted text-truncate">{{ m.message }}</div></div><span class="small text-muted">{{ m.created_at|timeago }}</span></li>{% endfor %}</ul>
+    {% else %}{{ ui.empty("fa-envelope-open", "No enquiries yet", "Messages from the website contact form appear here.") }}{% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous" defer></script>
+<script src="{{ asset('js/charts.js') }}" defer></script>
+{% endblock %}

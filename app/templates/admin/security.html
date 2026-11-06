@@ -1,0 +1,45 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Security{% endblock %}
+{% block content %}
+{% call ui.page_header("Security centre", "IP bans (manual and automatic), sign-in activity and abusive-language strikes.", "fa-shield-halved") %}
+  <button class="btn btn-primary" type="button" data-modal-open="#ban-modal"><i class="fa-solid fa-ban me-2"></i>Ban an IP</button>
+{% endcall %}
+<div class="cn-callout info"><i class="fa-solid fa-circle-info"></i><div class="small">Your current IP is <code>{{ my_ip }}</code> (it can't be banned). Automatic bans trigger after {{ settings.ABUSE_MAX_STRIKES }} abusive-language strikes within {{ settings.ABUSE_WINDOW_HOURS }} hours and last {{ settings.ABUSE_BAN_HOURS or "∞" }} hours; the admin and the person are emailed the reason.</div></div>
+<div class="cn-tabset">
+  <div class="cn-tabs mb-3" data-tabs>
+    <button type="button" data-tab="bans">IP bans ({{ bans|length }})</button>
+    <button type="button" data-tab="strikes">Moderation strikes</button>
+    <button type="button" data-tab="logins">Sign-in activity</button>
+  </div>
+  <div class="cn-tab-panel" id="bans"><div class="cn-card flush">
+    {% if bans %}<div class="cn-table-wrap"><table class="cn-table"><thead><tr><th>IP</th><th>Reason</th><th>By</th><th>Expires</th><th></th></tr></thead><tbody>
+      {% for b, name in bans %}<tr><td class="tabular fw-bold">{{ b.ip }}{% if name %}<div class="small text-muted fw-normal">{{ name }}</div>{% endif %}</td>
+        <td class="small">{{ b.reason }}</td><td>{% if b.is_auto %}<span class="cn-badge warning"><i class="fa-solid fa-robot"></i>Automatic</span>{% else %}{{ b.banned_by }}{% endif %}</td>
+        <td class="small">{{ b.expires_at|dt if b.expires_at else "Never" }}</td>
+        <td><form method="post" action="/admin/security/unban/{{ b.id }}" data-confirm="Unblock {{ b.ip }}?" data-confirm-tone="primary">{{ csrf_field() }}<button class="btn btn-soft btn-sm" type="submit">Unban</button></form></td></tr>{% endfor %}
+    </tbody></table></div>{% else %}{{ ui.empty("fa-shield", "No banned IPs") }}{% endif %}</div></div>
+  <div class="cn-tab-panel" id="strikes"><div class="cn-card flush">
+    {% if strikes %}<div class="cn-table-wrap"><table class="cn-table"><thead><tr><th>When</th><th>Who</th><th>IP</th><th>Where</th><th>Message (masked)</th></tr></thead><tbody>
+      {% for s, name, role in strikes %}<tr><td class="small text-nowrap">{{ s.created_at|dt('%d %b, %I:%M %p') }}</td><td class="small">{% if s.user_id %}<a href="/admin/members/{{ s.user_id }}">{{ name }}</a> · {{ role }}{% else %}Guest{% endif %}</td>
+        <td class="tabular small">{{ s.ip }}</td><td><span class="cn-chip">{{ s.context|replace('_', ' ') }}</span></td><td class="small">{{ s.excerpt }}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}{{ ui.empty("fa-comment-dots", "No strikes", "Abusive messages are masked automatically and logged here.") }}{% endif %}</div></div>
+  <div class="cn-tab-panel" id="logins"><div class="cn-card flush">
+    <div class="p-3"><a class="btn btn-sm {{ 'btn-primary' if failed else 'btn-ghost' }}" href="?failed={{ 0 if failed else 1 }}#logins">{{ "Show all" if failed else "Failed only" }}</a></div>
+    <div class="cn-table-wrap"><table class="cn-table"><thead><tr><th>When</th><th>User</th><th>Method</th><th>IP</th><th>Result</th></tr></thead><tbody>
+      {% for e in events %}<tr><td class="small text-nowrap">{{ e.created_at|dt('%d %b, %I:%M %p') }}</td><td class="small">{{ e.username }}</td><td><span class="cn-chip">{{ e.method }}</span></td>
+        <td class="tabular small">{{ e.ip }}</td><td>{{ ui.status("success" if e.success else "failed", "Success" if e.success else "Failed") }} <span class="small text-muted">{{ e.detail or "" }}</span></td></tr>{% endfor %}
+    </tbody></table></div></div></div>
+</div>
+{% call ui.modal("ban-modal", "Ban an IP address") %}
+<form method="post" action="/admin/security/ban">
+  {{ csrf_field() }}
+  <div class="cn-modal-body">
+    {{ ui.field("ip", "IP address", required=True, placeholder="192.168.0.57") }}
+    {{ ui.textarea("reason", "Reason", rows=2, required=True) }}
+    {{ ui.field("hours", "Duration in hours (0 = permanent)", type="number", value="0", attrs='min="0"') }}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-danger" type="submit">Ban</button></div>
+</form>
+{% endcall %}
+{% endblock %}

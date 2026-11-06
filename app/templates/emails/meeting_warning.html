@@ -1,0 +1,16 @@
+{% extends "emails/base.html" %}
+{% block content %}
+{% if kind == "missed" %}
+<h1 style="margin:0 0 10px;font-size:21px;color:#b91c1c;">⚠️ Live class has not started</h1>
+<p>The class <strong>{{ lesson }}</strong> for <strong>{{ batch }}</strong> was due at <strong>{{ when }}</strong>, but no live meeting has been held and there is no pre-recorded video.</p>
+{% elif kind == "reminder" %}
+<h1 style="margin:0 0 10px;font-size:21px;">Reminder: a live class is required</h1>
+<p><strong>{{ lesson }}</strong> for <strong>{{ batch }}</strong> is scheduled for <strong>{{ when }}</strong>. It has no pre-recorded video, so it must be conducted as a live class.</p>
+{% else %}
+<h1 style="margin:0 0 10px;font-size:21px;">A live class is mandatory</h1>
+<p>A class was scheduled without a pre-recorded video: <strong>{{ lesson }}</strong> for <strong>{{ batch }}</strong> on <strong>{{ when }}</strong>.</p>
+<p>Because there is no video, conducting a live meeting is <strong>necessary</strong>. A meeting room has been created automatically.</p>
+{% endif %}
+<p>Options: start the live class on time, or attach a pre-recorded video to the class (then no meeting is required).</p>
+<p style="margin:22px 0;"><a href="{{ link }}" style="background:#4f46e5;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:700;">Open the class</a></p>
+{% endblock %}

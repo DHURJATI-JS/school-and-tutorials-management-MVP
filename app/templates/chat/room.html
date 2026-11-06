@@ -1,0 +1,22 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ batch.name }} chat{% endblock %}
+{% block content %}
+<div class="cn-page-head">
+  <div><span class="cn-head-icon" style="background: color-mix(in srgb, {{ batch.color }} 15%, transparent); color: {{ batch.color }}"><i class="fa-solid fa-comments"></i></span>
+    <div><h1>{{ batch.name }}</h1><p data-online>Connecting…</p></div></div>
+  <div class="cn-page-actions"><span class="cn-badge warning" data-conn>Connecting…</span>
+    {% if batches|length > 1 %}<div class="cn-dropdown"><button class="btn btn-ghost" type="button" data-dropdown-toggle>Switch batch <i class="fa-solid fa-chevron-down ms-1"></i></button>
+      <div class="cn-menu">{% for b in batches %}<a href="/chat/{{ b.id }}"><span class="cn-color-dot" style="background:{{ b.color }}"></span>{{ b.name }}</a>{% endfor %}</div></div>{% endif %}</div>
+</div>
+<script type="application/json" id="chat-initial">{{ page_json(messages) }}</script>
+<div class="cn-card flush cn-chat" data-batch-chat data-batch="{{ batch.id }}" data-me="{{ my_id or '' }}" data-mod="{{ '1' if can_moderate else '0' }}">
+  <div class="cn-chat-log" data-log></div>
+  <form class="cn-chat-input" data-ajax>
+    <textarea class="form-control" rows="1" placeholder="Message {{ batch.name }}… (Enter to send)" maxlength="1000" aria-label="Message"></textarea>
+    <button class="btn btn-primary" type="submit" aria-label="Send"><i class="fa-solid fa-paper-plane"></i></button>
+  </form>
+</div>
+<p class="small text-muted mt-2"><i class="fa-solid fa-shield-halved me-1"></i>Abusive words are masked. {{ settings.ABUSE_MAX_STRIKES }} strikes in {{ settings.ABUSE_WINDOW_HOURS }} h lead to an automatic block, and the admin is informed.</p>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('js/chat.js') }}" defer></script>{% endblock %}

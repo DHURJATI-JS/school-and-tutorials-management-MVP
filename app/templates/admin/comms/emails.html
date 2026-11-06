@@ -1,0 +1,18 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Email log{% endblock %}
+{% block content %}
+{% call ui.page_header("Email log", "Every email the platform sends via SMTP (welcome, ID cards, OTPs, warnings, receipts…).", "fa-envelope-open-text") %}
+  <form method="get"><select class="form-select" name="status" data-autosubmit aria-label="Status"><option value="">All</option>
+    {% for s in ["sent", "failed", "skipped"] %}<option value="{{ s }}" {{ 'selected' if s == status }}>{{ s|capitalize }}</option>{% endfor %}</select></form>
+  <form method="post" action="/admin/ai/test-email">{{ csrf_field() }}<button class="btn btn-ghost" type="submit"><i class="fa-solid fa-vial me-2"></i>Send test email</button></form>
+{% endcall %}
+<div class="cn-card flush">
+  {% if emails %}<div class="cn-table-wrap"><table class="cn-table"><thead><tr><th>When</th><th>To</th><th>Subject</th><th>Type</th><th>Status</th></tr></thead><tbody>
+    {% for e in emails %}<tr><td class="small text-nowrap">{{ e.created_at|dt('%d %b, %I:%M %p') }}</td><td class="small text-truncate" style="max-width:220px">{{ e.to_email }}</td>
+      <td class="small">{{ e.subject }}</td><td><span class="cn-chip">{{ e.category }}</span></td>
+      <td>{{ ui.status(e.status) }}{% if e.error %}<div class="small text-danger text-truncate" style="max-width:280px" title="{{ e.error }}">{{ e.error }}</div>{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>{% else %}{{ ui.empty("fa-envelope", "No emails yet") }}{% endif %}
+</div>
+{{ ui.pagination(page, pages, "?status=" ~ status) }}
+{% endblock %}

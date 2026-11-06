@@ -1,0 +1,15 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+{% call ui.page_header(title, "Classes, tasks, tests, PTMs and holidays in one place. Click an item to open it.", "fa-calendar-days") %}{% endcall %}
+<div class="cn-card">
+  <div class="cn-legend mb-3"><span style="--c: rgba(239,68,68,.35)">Holiday</span><span style="--c: rgba(245,158,11,.4)">Vacation</span>
+    <span style="--c: color-mix(in srgb, var(--cn-muted) 25%, transparent)">Weekly off</span><span style="--c: var(--cn-primary)">🔴 live · ▶️ video · 📝 task · 🧪 test</span></div>
+  <div id="cn-calendar"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js" integrity="sha384-B1OFx8Gy9GjPu8UbUyXbGQpzll9ubAUQ9agInFJ8NnD7nYG1u/CLR+Sqr5yifl4q" crossorigin="anonymous" defer></script>
+<script src="{{ asset('js/calendar.js') }}" defer></script>
+{% endblock %}

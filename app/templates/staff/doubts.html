@@ -1,0 +1,19 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Student doubts{% endblock %}
+{% block content %}
+{% call ui.page_header("Student doubts", "Questions students asked the AI tutor. Ones the AI couldn't answer (offline) are flagged for you.", "fa-circle-question") %}{% endcall %}
+{% if doubts %}<div class="cn-grid">{% for d in doubts %}
+  <div class="cn-card" style="{{ 'border-left: 4px solid var(--cn-danger)' if d.needs_teacher }}">
+    <div class="d-flex gap-3 align-items-start">{{ ui.avatar(d.user, 38) }}
+      <div class="flex-grow-1 min-w-0">
+        <div class="d-flex flex-wrap gap-2 align-items-center"><strong>{{ d.user.full_name }}</strong><span class="small text-muted">{{ d.created_at|timeago }}</span>
+          {% if d.needs_teacher %}<span class="cn-badge danger">Needs you</span>{% endif %}{% if d.timestamp_label %}<span class="cn-chip">📸 {{ d.timestamp_label }}</span>{% endif %}</div>
+        {% if d.image_path %}<img class="cn-frame mt-2" style="max-width: 320px; border-radius: 12px" src="/files/doubt/{{ d.id }}" alt="Video frame">{% endif %}
+        <p class="fw-semibold mt-2 mb-2">{{ d.question }}</p>
+        <details><summary class="small">Answer given ({{ d.answered_by }})</summary><div class="cn-rich small mt-2">{{ d.answer|markdown }}</div></details>
+        <form method="post" action="/staff/doubts/{{ d.id }}/answer" class="d-flex gap-2 mt-2">{{ csrf_field() }}
+          <input class="form-control" name="text" placeholder="Reply to {{ d.user.full_name.split()[0] }}…" required><button class="btn btn-primary" type="submit">Reply</button></form>
+      </div></div></div>
+{% endfor %}</div>{% else %}<div class="cn-card">{{ ui.empty("fa-circle-question", "No doubts yet", "Students' AI tutor questions from your batches appear here.") }}</div>{% endif %}
+{% endblock %}

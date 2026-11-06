@@ -1,0 +1,58 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ "Add" if is_new else "Edit" }} {{ meta.label|lower }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" integrity="sha384-ecIckRi4QlKYya/FQUbBUjS4qp65jF/J87Guw5uzTbO1C1Jfa/6kYmd6dXUF6D7i" crossorigin="anonymous">{% endblock %}
+{% block content %}
+{% set d = section.data or {} %}
+{% call ui.page_header(("Add " if is_new else "Edit ") ~ meta.label|lower, "Changes go live on the home page as soon as you save.", meta.icon) %}
+  <a class="btn btn-ghost" href="/admin/site"><i class="fa-solid fa-arrow-left me-2"></i>Back</a>
+{% endcall %}
+<form method="post" action="/admin/site/sections/{{ section.id }}" enctype="multipart/form-data">
+  {{ csrf_field() }}<input type="hidden" name="kind" value="{{ section.kind }}">
+  <div class="cn-grid" style="grid-template-columns: minmax(0, 2fr) minmax(0, 1fr)">
+    <div class="cn-card">
+      {{ ui.field("title", "Heading", value=section.title) }}
+      {{ ui.textarea("subtitle", "Sub-heading", value=section.subtitle, rows=2) }}
+      {% if section.kind in ("hero", "cta") %}
+      <div class="cn-form-grid">
+        {% if section.kind == "hero" %}{{ ui.field("badge", "Badge text", value=d.badge, cls="span-2") }}{% endif %}
+        {{ ui.field("primary_label", "Primary button label", value=d.primary_label) }}
+        {{ ui.field("primary_url", "Primary button link", value=d.primary_url, help="/path, #anchor, https://…, or the words whatsapp / email") }}
+        {{ ui.field("secondary_label", "Secondary button label", value=d.secondary_label) }}
+        {{ ui.field("secondary_url", "Secondary button link", value=d.secondary_url) }}
+      </div>
+      {% endif %}
+      {% if meta.fields %}
+      <div class="cn-field" data-repeater="#items-json" data-fields='{{ meta.fields|tojson }}'>
+        <div class="d-flex justify-content-between align-items-center mb-2"><label class="form-label mb-0">Items</label>
+          <button class="btn btn-soft btn-sm" type="button" data-add><i class="fa-solid fa-plus me-1"></i>Add item</button></div>
+        <div data-items></div>
+        <input type="hidden" name="items_json" id="items-json" value='{{ (d.get("items") or [])|tojson }}'>
+      </div>
+      {% endif %}
+      {% if section.kind in ("richtext", "hero", "features") %}
+      <div class="cn-field"><label class="form-label">{{ "Content" if section.kind == "richtext" else "Extra content (optional)" }}</label>
+        <div data-quill="#body-input" style="min-height: 220px">{{ "" }}</div>
+        <input type="hidden" name="body" id="body-input" value="{{ section.body or '' }}"></div>
+      {% endif %}
+    </div>
+    <div>
+      <div class="cn-card">
+        {{ ui.check("is_visible", "Visible on the home page", checked=section.is_visible) }}
+        {% if section.kind == "contact" %}{{ ui.check("show_form", "Show the contact form", checked=d.show_form) }}{% endif %}
+        {% if section.kind == "hero" %}
+        <div class="cn-field"><label class="form-label">Background image (optional)</label>
+          {% if d.image %}<img src="{{ d.image }}" alt="" class="w-100 rounded-3 mb-2">{{ ui.check("remove_image", "Remove current image") }}{% endif %}
+          <input class="form-control" type="file" name="image" accept="image/png,image/jpeg,image/webp"></div>
+        {% endif %}
+        <button class="btn btn-primary w-100" type="submit"><i class="fa-solid fa-floppy-disk me-2"></i>Save section</button>
+      </div>
+      {% if section.kind == "features" %}<div class="cn-callout info mt-3"><i class="fa-solid fa-icons"></i><div class="small">Icons use Font Awesome names such as <code>fa-video</code>, <code>fa-robot</code> or <code>fa-calendar-check</code>.</div></div>{% endif %}
+    </div>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js" integrity="sha384-utBUCeG4SYaCm4m7GQZYr8Hy8Fpy3V4KGjBZaf4WTKOcwhCYpt/0PfeEe3HNlwx8" crossorigin="anonymous" defer></script>
+<script src="{{ asset('js/builder.js') }}" defer></script>
+{% endblock %}

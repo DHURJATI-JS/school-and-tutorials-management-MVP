@@ -1,0 +1,20 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Tests{% endblock %}
+{% block content %}
+{% call ui.page_header("Tests", "Generate class- and subject-aware tests with AI, edit them, then publish to a batch.", "fa-file-pen") %}
+  <a class="btn btn-primary" href="/admin/tests/generate"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>New test</a>
+{% endcall %}
+<div class="cn-card flush">
+  {% if tests %}
+  <div class="cn-table-wrap"><table class="cn-table">
+    <thead><tr><th>Test</th><th>Batch</th><th class="num">Questions</th><th class="num">Marks</th><th class="num">Attempts</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for t in tests %}<tr>
+      <td><a class="fw-bold" href="/admin/tests/{{ t.id }}">{{ t.title }}</a><div class="small text-muted">{{ t.topic }} · {{ t.difficulty }}{% if t.ai_generated %} · <i class="fa-solid fa-wand-magic-sparkles"></i> AI{% endif %}</div></td>
+      <td>{{ t.batch.name }}</td><td class="num">{{ qcounts.get(t.id, 0) }}</td><td class="num">{{ t.total_marks|num }}</td><td class="num">{{ acounts.get(t.id, 0) }}</td>
+      <td>{{ ui.status(t.status) }}</td>
+      <td><div class="cn-actions">{% if t.status == "published" %}<a class="btn btn-soft btn-sm" href="/admin/tests/{{ t.id }}/results">Results</a>{% endif %}
+        <a class="btn btn-ghost btn-sm" href="/admin/tests/{{ t.id }}">Open</a></div></td></tr>{% endfor %}</tbody></table></div>
+  {% else %}{{ ui.empty("fa-file-pen", "No tests yet", "The AI uses each batch's class, subject and uploaded notes to draft questions.", "/admin/tests/generate", "Generate a test") }}{% endif %}
+</div>
+{% endblock %}

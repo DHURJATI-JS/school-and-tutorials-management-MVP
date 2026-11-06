@@ -1,0 +1,27 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Classes{% endblock %}
+{% macro card(l) %}
+{% set mark = marks.get(l.id) %}{% set prog = progress.get(l.video_id) if l.video_id else None %}
+<a class="cn-card d-block" href="/student/lessons/{{ l.id }}" style="color:inherit; border-top: 4px solid {{ l.batch.color }}">
+  <div class="d-flex justify-content-between align-items-start gap-2">
+    {% if l.meeting and l.meeting.status == "live" %}<span class="cn-badge live">Live now</span>
+    {% elif l.video %}<span class="cn-badge success"><i class="fa-solid fa-circle-play"></i>{{ "Recording" if l.video.source == "recording" else "Video" }}</span>
+    {% else %}<span class="cn-badge info"><i class="fa-solid fa-video"></i>Live class</span>{% endif %}
+    {% if mark %}{{ ui.status(mark) }}{% endif %}
+  </div>
+  <h3 class="h6 mt-2 mb-1">{{ l.title }}</h3>
+  <div class="small text-muted">{{ l.batch.name }} · {{ l.date|d('%a %d %b') }} · {{ l.start_time|t }}</div>
+  {% if prog and l.video and l.video.duration_seconds %}{% set pct = ((prog.watched_seconds * 100 / l.video.duration_seconds)|round|int) %}
+  <div class="cn-meter mt-2"><span style="width: {{ [pct, 100]|min }}%"></span></div><div class="small text-muted mt-1">Watched {{ [pct, 100]|min }}%</div>{% endif %}
+</a>
+{% endmacro %}
+{% block content %}
+{% call ui.page_header("Classes", "Live classes, recordings and pre-recorded lessons. Watch at least half of a video to get attendance.", "fa-chalkboard-user") %}{% endcall %}
+<h2 class="h5 mb-3">Upcoming</h2>
+{% if upcoming %}<div class="cn-grid auto mb-4">{% for l in upcoming %}{{ card(l) }}{% endfor %}</div>
+{% else %}<div class="cn-card mb-4">{{ ui.empty("fa-calendar", "No upcoming classes") }}</div>{% endif %}
+<h2 class="h5 mb-3">Past classes & recordings</h2>
+{% if past %}<div class="cn-grid auto">{% for l in past %}{{ card(l) }}{% endfor %}</div>
+{% else %}<div class="cn-card">{{ ui.empty("fa-clock-rotate-left", "Nothing yet") }}</div>{% endif %}
+{% endblock %}

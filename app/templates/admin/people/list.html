@@ -1,0 +1,50 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ "Students" if role == "student" else "Staff" }}{% endblock %}
+{% block content %}
+{% call ui.page_header("Students" if role == "student" else "Staff", total ~ " " ~ ("students" if role == "student" else "staff members") ~ " found", "fa-user-graduate" if role == "student" else "fa-id-badge") %}
+  <a class="btn btn-primary" href="/admin/members/new?role={{ role }}"><i class="fa-solid fa-user-plus me-2"></i>Add {{ "student" if role == "student" else "staff member" }}</a>
+{% endcall %}
+<form class="cn-card mb-3 d-flex flex-wrap gap-2 align-items-end" method="get">
+  <div class="flex-grow-1" style="min-width:220px"><label class="form-label">Search</label>
+    <input class="form-control" name="q" value="{{ q }}" placeholder="Name, email, phone, ID number…"></div>
+  {% if role == "student" %}
+  <div><label class="form-label">Batch</label><select class="form-select" name="batch" data-autosubmit>
+    <option value="0">All batches</option>{% for b in batches %}<option value="{{ b.id }}" {{ 'selected' if b.id == batch }}>{{ b.name }}</option>{% endfor %}</select></div>
+  {% else %}
+  <div><label class="form-label">Role</label><select class="form-select" name="staff_role" data-autosubmit>
+    <option value="">All roles</option>{% for k, v in C.STAFF_ROLES.items() %}<option value="{{ k }}" {{ 'selected' if k == staff_role }}>{{ v }}</option>{% endfor %}</select></div>
+  {% endif %}
+  <div><label class="form-label">Status</label><select class="form-select" name="status" data-autosubmit>
+    {% for v, l in [("active", "Active"), ("removed", "Removed"), ("banned", "Banned"), ("deleted", "Deleted (dormant)"), ("all", "All")] %}<option value="{{ v }}" {{ 'selected' if v == status }}>{{ l }}</option>{% endfor %}</select></div>
+  <button class="btn btn-ghost" type="submit" data-allow-resubmit><i class="fa-solid fa-magnifying-glass"></i></button>
+</form>
+<div class="cn-card flush">
+  {% if people %}
+  <div class="cn-table-wrap"><table class="cn-table">
+    <thead><tr><th>{{ "Student" if role == "student" else "Staff member" }}</th><th>ID</th>
+      {% if role == "student" %}<th>Batches</th><th>Parent</th>{% else %}<th>Role</th><th>Batches taught</th>{% endif %}
+      <th>Contact</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for p in people %}
+    <tr>
+      <td>{{ ui.person(p, (p.class_level or "") if role == "student" else (p.designation or p.role_label), "/admin/members/" ~ p.id) }}
+        {% if p.special_needs %}<span class="cn-badge info mt-1" title="AI uses a gentle, lenient tone"><i class="fa-solid fa-hand-holding-heart"></i>Special needs</span>{% endif %}
+        {% if p.health_records %}<span class="cn-badge warning mt-1"><i class="fa-solid fa-notes-medical"></i>Health note</span>{% endif %}</td>
+      <td class="tabular">{{ p.id_code }}</td>
+      {% if role == "student" %}
+      <td>{% for e in p.enrollments %}<span class="cn-chip me-1 mb-1"><span class="cn-color-dot" style="background:{{ e.batch.color }}"></span>{{ e.batch.name }}</span>{% else %}<span class="text-muted">—</span>{% endfor %}</td>
+      <td><div class="small fw-semibold">{{ p.parent_name or "—" }}</div><div class="small text-muted">{{ p.parent_phone or "" }}</div></td>
+      {% else %}
+      <td>{{ p.role_label }}</td><td>{{ taught.get(p.id, 0) }}</td>
+      {% endif %}
+      <td><div class="small"><a href="mailto:{{ p.email }}">{{ p.email }}</a></div><div class="small text-muted">{{ p.phone }}</div></td>
+      <td>{{ ui.status(p.status) }}</td>
+      <td><div class="cn-actions"><a class="btn btn-soft btn-sm" href="/admin/members/{{ p.id }}">Open</a></div></td>
+    </tr>
+    {% endfor %}
+    </tbody></table></div>
+  {% else %}{{ ui.empty("fa-users", "Nobody here yet", "Register people with their photo, date of birth, contact details and ID proof.", "/admin/members/new?role=" ~ role, "Add " ~ ("student" if role == "student" else "staff")) }}{% endif %}
+</div>
+{{ ui.pagination(page, pages, "?q=" ~ q ~ "&status=" ~ status ~ "&batch=" ~ batch ~ "&staff_role=" ~ staff_role) }}
+{% endblock %}

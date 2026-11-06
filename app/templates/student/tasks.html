@@ -1,0 +1,22 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Tasks & tests{% endblock %}
+{% block content %}
+{% call ui.page_header("Tasks & tests", "Everything your teachers assigned — also on your calendar.", "fa-list-check") %}
+  <a class="btn btn-ghost" href="/student/calendar"><i class="fa-solid fa-calendar-days me-2"></i>Calendar view</a>
+{% endcall %}
+{% if tasks %}
+<div class="cn-grid auto">
+  {% for t in tasks %}{% set sub = subs.get(t.id) %}{% set att = attempts.get(t.test_id) if t.test_id else None %}
+  {% set upcoming = t.assign_date > today() %}{% set closed = t.due_date < today() %}
+  <a class="cn-card d-block" href="/student/tasks/{{ t.id }}" style="color:inherit; border-top: 4px solid {{ t.batch.color }}; {{ 'opacity:.6' if upcoming }}">
+    <div class="d-flex justify-content-between align-items-start gap-2"><span class="cn-chip">{{ "🧪 Test" if t.kind == "test" else ("🏖️ Holiday homework" if t.is_holiday_homework else C.TASK_KINDS.get(t.kind, t.kind)) }}</span>
+      {% if att %}{{ ui.status(att.status) }}{% elif sub %}{{ ui.status(sub.status) }}{% elif upcoming %}<span class="cn-badge neutral">Opens {{ t.assign_date|d('%d %b') }}</span>{% elif closed %}<span class="cn-badge danger">Missed</span>{% else %}<span class="cn-badge warning">To do</span>{% endif %}</div>
+    <h3 class="h6 mt-2 mb-1">{{ t.title }}</h3>
+    <div class="small text-muted">{{ t.batch.name }} · due {{ t.due_date|d('%a %d %b') }}</div>
+    {% if att and att.percent is not none %}<div class="mt-2 fw-bold">Score: {{ att.percent }}%</div>{% elif sub and sub.marks is not none %}<div class="mt-2 fw-bold">Marks: {{ sub.marks|num }}{% if t.max_marks %} / {{ t.max_marks|num }}{% endif %}</div>{% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% else %}<div class="cn-card">{{ ui.empty("fa-mug-hot", "No tasks yet", "When your teacher assigns homework or a test, it shows up here and on your calendar.") }}</div>{% endif %}
+{% endblock %}

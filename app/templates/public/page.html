@@ -1,0 +1,10 @@
+{% extends "layouts/public.html" %}
+{% block title %}{{ page.title }}{% endblock %}
+{% block content %}
+<section class="cn-section"><div class="container" style="max-width: 880px">
+  <span class="cn-eyebrow"><i class="fa-solid fa-file-lines"></i>{{ site.site_name }}</span>
+  <h1 class="cn-section-title">{{ page.title }}</h1>
+  <div class="cn-card mt-4"><div class="cn-rich">{{ page.body|rich }}</div></div>
+  <p class="small text-muted mt-3">Last updated {{ page.updated_at|d }}</p>
+</div></section>
+{% endblock %}

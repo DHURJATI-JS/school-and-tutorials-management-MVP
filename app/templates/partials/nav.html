@@ -1,0 +1,32 @@
+{% if user.kind == "admin" %}
+{% set groups = [
+  ("Overview", [("/admin", "fa-gauge-high", "Dashboard"), ("/admin/insights", "fa-wand-magic-sparkles", "AI insights"), ("/admin/reports", "fa-shield-heart", "Reports & complaints")]),
+  ("Website", [("/admin/site", "fa-house-chimney-window", "Home page builder"), ("/admin/site/pages", "fa-file-lines", "Pages"), ("/admin/site/branding", "fa-palette", "Branding"), ("/admin/inbox", "fa-inbox", "Enquiries")]),
+  ("People", [("/admin/students", "fa-user-graduate", "Students"), ("/admin/staff", "fa-id-badge", "Staff"), ("/admin/directory", "fa-address-book", "Directory")]),
+  ("Academics", [("/admin/batches", "fa-layer-group", "Batches"), ("/admin/calendar", "fa-calendar-days", "Calendar & holidays"), ("/admin/lessons", "fa-chalkboard-user", "Classes"), ("/admin/meetings", "fa-video", "Live meetings"), ("/admin/videos", "fa-film", "Video library"), ("/admin/tasks", "fa-list-check", "Tasks"), ("/admin/tests", "fa-file-pen", "Tests"), ("/admin/knowledge", "fa-brain", "Knowledge base"), ("/chat", "fa-comments", "Batch chats")]),
+  ("Finance", [("/admin/fees", "fa-indian-rupee-sign", "Fees"), ("/admin/salaries", "fa-money-check-dollar", "Salaries")]),
+  ("Communication", [("/admin/comms", "fa-paper-plane", "Messages"), ("/admin/ptm", "fa-people-roof", "PTMs"), ("/admin/emails", "fa-envelope-open-text", "Email log")]),
+  ("System", [("/admin/ai", "fa-microchip", "AI & services"), ("/admin/security", "fa-shield-halved", "Security"),
+              ("/admin/load-test", "fa-chart-line", "Load test report")]),
+] %}
+{% elif user.kind == "student" %}
+{% set groups = [
+  ("Learn", [("/student", "fa-house", "Dashboard"), ("/student/calendar", "fa-calendar-days", "Calendar"), ("/student/tasks", "fa-list-check", "Tasks & tests"), ("/student/classes", "fa-chalkboard-user", "Classes"), ("/student/tutor", "fa-robot", "AI doubt solver")]),
+  ("Connect", [("/assistant", "fa-wand-magic-sparkles", "My AI assistant"), ("/friends", "fa-user-group", "Friends"), ("/messages", "fa-comment-dots", "Messages"), ("/chat", "fa-comments", "Batch chat"), ("/notifications", "fa-bell", "Notifications")]),
+  ("Account", [("/student/fees", "fa-indian-rupee-sign", "Fees"), ("/student/profile", "fa-id-card", "Profile & ID card")]),
+] %}
+{% else %}
+{% set teaching = user.is_teaching %}
+{% set groups = [
+  ("Work", [("/staff", "fa-house", "Dashboard"), ("/staff/calendar", "fa-calendar-days", "Calendar")] + ([("/staff/doubts", "fa-circle-question", "Student doubts"), ("/staff/insights", "fa-wand-magic-sparkles", "AI insights"), ("/chat", "fa-comments", "Batch chats")] if teaching else [])),
+  ("Connect", [("/assistant", "fa-robot", "My AI assistant"), ("/friends", "fa-user-group", "Friends"), ("/messages", "fa-comment-dots", "Messages"), ("/notifications", "fa-bell", "Notifications")]),
+  ("Account", [("/staff/salary", "fa-file-invoice", "Salary slips"), ("/staff/profile", "fa-id-card", "Profile & ID card")]),
+] %}
+{% endif %}
+{% for group, links in groups %}
+<div class="cn-nav-group small-caps">{{ group }}</div>
+{% for href, icon, label in links %}
+{% set active = current_path == href or (href not in ("/admin", "/student", "/staff") and current_path.startswith(href ~ "/")) %}
+<a href="{{ href }}" class="{{ 'active' if active }}"><i class="fa-solid {{ icon }}"></i><span>{{ label }}</span></a>
+{% endfor %}
+{% endfor %}

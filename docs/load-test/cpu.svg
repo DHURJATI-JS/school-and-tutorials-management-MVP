@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" width="760" height="300" role="img" aria-label="Server CPU">
+<style>
+.surf{fill:#fcfcfb} .band{fill:#f3f2ee} .ink{fill:#0b0b0b} .ink2{fill:#52514e} .muted{fill:#898781}
+.grid{stroke:#e1e0d9} .axis{stroke:#c3c2b7} .s1{stroke:#2a78d6} .s2{stroke:#eb6834} .f1{fill:#2a78d6} .f2{fill:#eb6834}
+.ring{stroke:#fcfcfb} .frame{stroke:rgba(11,11,11,.10)}
+text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif} .num{font-variant-numeric:tabular-nums}
+@media (prefers-color-scheme: dark){
+.surf{fill:#1a1a19} .band{fill:#222220} .ink{fill:#f0efec} .ink2{fill:#c3c2b7} .grid{stroke:#2c2c2a}
+.axis{stroke:#383835} .s1{stroke:#3987e5} .s2{stroke:#d95926} .f1{fill:#3987e5} .f2{fill:#d95926}
+.ring{stroke:#1a1a19} .frame{stroke:rgba(255,255,255,.10)} }
+</style>
+<rect class="surf frame" x="0.5" y="0.5" width="759" height="299" rx="12" stroke-width="1"/>
+<text class="ink" x="20" y="30" font-size="16" font-weight="700">Server CPU</text>
+<text class="ink2" x="20" y="50" font-size="12">App (% of one core) and PostgreSQL · spikes: each step's sign-ins (bcrypt)</text>
+<text class="muted" x="119.0" y="68" font-size="11" text-anchor="middle">50 users</text>
+<rect class="band" x="180.0" y="74" width="122.0" height="186"/>
+<text class="muted" x="241.0" y="68" font-size="11" text-anchor="middle">100 users</text>
+<text class="muted" x="363.0" y="68" font-size="11" text-anchor="middle">200 users</text>
+<rect class="band" x="424.0" y="74" width="122.0" height="186"/>
+<text class="muted" x="485.0" y="68" font-size="11" text-anchor="middle">300 users</text>
+<text class="muted" x="607.0" y="68" font-size="11" text-anchor="middle">400 users</text>
+<line class="grid" x1="58" x2="668" y1="260.0" y2="260.0" stroke-width="1"/>
+<text class="muted num" x="50" y="264.0" font-size="11" text-anchor="end">0</text>
+<line class="grid" x1="58" x2="668" y1="213.5" y2="213.5" stroke-width="1"/>
+<text class="muted num" x="50" y="217.5" font-size="11" text-anchor="end">50</text>
+<line class="grid" x1="58" x2="668" y1="167.0" y2="167.0" stroke-width="1"/>
+<text class="muted num" x="50" y="171.0" font-size="11" text-anchor="end">100</text>
+<line class="grid" x1="58" x2="668" y1="120.5" y2="120.5" stroke-width="1"/>
+<text class="muted num" x="50" y="124.5" font-size="11" text-anchor="end">150</text>
+<line class="grid" x1="58" x2="668" y1="74.0" y2="74.0" stroke-width="1"/>
+<text class="muted num" x="50" y="78.0" font-size="11" text-anchor="end">200</text>
+<line class="axis" x1="58" x2="668" y1="260" y2="260" stroke-width="1"/>
+<text class="muted num" x="58.0" y="278" font-size="11" text-anchor="middle">0 min</text>
+<text class="muted num" x="180.0" y="278" font-size="11" text-anchor="middle">2 min</text>
+<text class="muted num" x="302.0" y="278" font-size="11" text-anchor="middle">4 min</text>
+<text class="muted num" x="424.0" y="278" font-size="11" text-anchor="middle">6 min</text>
+<text class="muted num" x="546.0" y="278" font-size="11" text-anchor="middle">8 min</text>
+<text class="muted num" x="668.0" y="278" font-size="11" text-anchor="middle">10 min</text>
+<text class="muted" x="50" y="68" font-size="11" text-anchor="end">%</text>
+<path class="s1" d="M63.1,213.6 L68.2,213.6 L73.2,213.6 L78.3,207.5 L83.4,207.5 L88.5,207.5 L93.6,220.3 L98.7,220.3 L103.8,251.2 L108.8,251.2 L113.9,251.2 L119.0,250.3 L124.1,250.3 L129.2,248.7 L134.2,248.7 L139.3,246.6 L144.4,246.6 L149.5,246.6 L154.6,246.6 L159.7,246.6 L164.8,247.8 L169.8,247.8 L174.9,247.8 L180.0,247.8 L185.1,247.8 L190.2,208.4 L195.2,208.4 L200.3,208.4 L205.4,197.9 L210.5,197.9 L215.6,231.3 L220.7,231.3 L225.8,239.4 L230.8,239.4 L235.9,239.4 L241.0,234.2 L246.1,234.2 L251.2,237.3 L256.2,237.3 L261.3,237.3 L266.4,238.9 L271.5,238.9 L276.6,238.2 L281.7,238.2 L286.8,238.2 L291.8,236.8 L296.9,236.8 L302.0,236.8 L307.1,199.1 L312.2,199.1 L317.2,136.4 L322.3,136.4 L327.4,147.9 L332.5,147.9 L337.6,217.7 L342.7,217.7 L347.8,217.7 L352.8,219.5 L357.9,219.5 L363.0,227.6 L368.1,227.6 L373.2,214.4 L378.2,214.4 L383.3,209.9 L388.4,209.9 L393.5,212.1 L398.6,212.1 L403.7,212.1 L408.8,217.5 L413.8,217.5 L418.9,217.4 L424.0,217.4 L429.1,144.2 L434.2,144.2 L439.2,105.2 L444.3,105.2 L449.4,105.2 L454.5,142.3 L459.6,142.3 L464.7,177.7 L469.8,177.7 L474.8,186.5 L479.9,186.5 L485.0,184.8 L490.1,184.8 L495.2,184.8 L500.2,184.4 L505.3,184.4 L510.4,182.4 L515.5,182.4 L520.6,188.8 L525.7,188.8 L530.8,187.1 L535.8,187.1 L540.9,186.9 L546.0,186.9 L551.1,186.9 L556.2,104.5 L561.2,104.5 L566.3,108.3 L571.4,108.3 L576.5,148.5 L581.6,148.5 L586.7,173.4 L591.8,173.4 L596.8,173.4 L601.9,172.0 L607.0,172.0 L612.1,172.8 L617.2,172.8 L622.2,173.5 L627.3,173.5 L632.4,178.3 L637.5,178.3 L642.6,178.3 L647.7,171.3 L652.8,171.3 L657.8,176.1 L662.9,176.1 L668.0,176.1" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle class="f1 ring" cx="668.0" cy="176.1" r="4" stroke-width="2"/>
+<text class="ink num" x="677.0" y="180.1" font-size="12" font-weight="650">90 app</text>
+<path class="s2" d="M291.8,255.4 L296.9,255.4 L302.0,255.4 L307.1,242.5 L312.2,242.5 L317.2,243.1 L322.3,243.1 L327.4,239.4 L332.5,239.4 L337.6,248.7 L342.7,248.7 L347.8,248.7 L352.8,249.8 L357.9,249.8 L363.0,247.5 L368.1,247.5 L373.2,249.7 L378.2,249.7 L383.3,243.5 L388.4,243.5 L393.5,250.6 L398.6,250.6 L403.7,250.6 L408.8,253.0 L413.8,253.0 L418.9,250.3 L424.0,250.3 L429.1,228.2 L434.2,228.2 L439.2,222.9 L444.3,222.9 L449.4,222.9 L454.5,209.7 L459.6,209.7 L464.7,241.8 L469.8,241.8 L474.8,224.1 L479.9,224.1 L485.0,226.2 L490.1,226.2 L495.2,226.2 L500.2,233.8 L505.3,233.8 L510.4,209.9 L515.5,209.9 L520.6,244.1 L525.7,244.1 L530.8,241.4 L535.8,241.4 L540.9,222.5 L546.0,222.5 L551.1,222.5 L556.2,220.8 L561.2,220.8 L566.3,217.4 L571.4,217.4 L576.5,230.5 L581.6,230.5 L586.7,229.3 L591.8,229.3 L596.8,229.3 L601.9,233.9 L607.0,233.9 L612.1,236.0 L617.2,236.0 L622.2,226.5 L627.3,226.5 L632.4,232.7 L637.5,232.7 L642.6,232.7 L647.7,235.4 L652.8,235.4 L657.8,222.3 L662.9,222.3 L668.0,222.3" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle class="f2 ring" cx="668.0" cy="222.3" r="4" stroke-width="2"/>
+<text class="ink num" x="677.0" y="226.3" font-size="12" font-weight="650">41 database</text>
+<line class="s2" x1="566" x2="582" y1="25" y2="25" stroke-width="2" stroke-linecap="round"/>
+<text class="ink2" x="588" y="29" font-size="12">database</text>
+<line class="s1" x1="512" x2="528" y1="25" y2="25" stroke-width="2" stroke-linecap="round"/>
+<text class="ink2" x="534" y="29" font-size="12">app</text>
+</svg>

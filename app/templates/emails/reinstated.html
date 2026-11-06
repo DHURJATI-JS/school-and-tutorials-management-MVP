@@ -1,0 +1,7 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<p>Dear {{ name }},</p>
+<p>Good news — your access to <strong>{{ site.site_name }}</strong> has been restored. You can sign in again with your usual details.</p>
+{% if reason %}<p><strong>Note from the administration:</strong> {{ reason }}</p>{% endif %}
+<p>Welcome back!<br><strong>Team {{ site.site_name }}</strong></p>
+{% endblock %}

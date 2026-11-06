@@ -1,0 +1,44 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}My AI assistant{% endblock %}
+{% block content %}
+{% call ui.page_header("My AI assistant", "A private, live chat that remembers your context. Only you can see it.", "fa-wand-magic-sparkles") %}
+  <button class="btn btn-ghost" type="button" data-clear-assistant><i class="fa-solid fa-broom me-2"></i>Clear & forget</button>
+{% endcall %}
+<div class="cn-callout info"><i class="fa-solid fa-user-shield"></i><div class="small"><strong>Private by design.</strong> Your conversation is visible only to you.
+  If you raise a complaint or a safety concern, <em>only that message</em> is shared confidentially with the administration so they can help.</div></div>
+<div class="cn-grid" style="grid-template-columns: minmax(0, 1fr) minmax(240px, 300px)">
+  <div class="cn-card flush cn-chat" data-assistant>
+    <div class="cn-chat-log" data-log>
+      {% for msg in history %}
+      <div class="cn-msg {{ 'mine' if msg.role == 'user' else 'ai' }}"><div class="cn-bubble">{% if msg.role == "user" %}{{ msg.content }}{% else %}{{ msg.content|markdown }}{% endif %}</div>
+        <div class="cn-meta">{{ "You" if msg.role == "user" else "Assistant" }} · {{ msg.created_at|timeago }}</div></div>
+      {% else %}
+      <div class="cn-msg ai" data-empty><div class="cn-bubble">Hi {{ user.name.split()[0] }}! 👋 I'm your private assistant at {{ site.site_name }}.
+        {% if is_staff %}Ask me about your batches or a student's progress, draft a parent message, or plan a lesson.{% else %}Ask me what's due this week, how you're doing, for study tips — or tell me if something is bothering you.{% endif %}</div></div>
+      {% endfor %}
+    </div>
+    <form class="cn-chat-input" data-ajax>
+      <textarea class="form-control" rows="1" placeholder="Message your assistant… (Enter to send)" maxlength="2000" aria-label="Message"></textarea>
+      <button class="btn btn-primary" type="submit" aria-label="Send"><i class="fa-solid fa-paper-plane"></i></button>
+    </form>
+  </div>
+  <div>
+    <div class="cn-card">
+      <h3 class="h6">Try asking</h3>
+      <div class="d-grid gap-2">
+        {% if is_staff %}
+        {% for s in ["How is my batch doing overall?", "Which students need extra help this week?", "Write a polite note to a parent about low attendance", "Plan a 1-hour revision class on fractions"] %}<button class="btn btn-ghost btn-sm text-start" type="button" data-suggest="{{ s }}">{{ s }}</button>{% endfor %}
+        {% else %}
+        {% for s in ["What's due this week?", "How am I doing in my tests?", "Give me a 7-day study plan", "I want to report a problem"] %}<button class="btn btn-ghost btn-sm text-start" type="button" data-suggest="{{ s }}">{{ s }}</button>{% endfor %}
+        {% endif %}
+      </div>
+    </div>
+    <div class="cn-card">
+      <h3 class="h6"><i class="fa-solid fa-brain me-2 text-muted"></i>What I remember</h3>
+      <div class="small text-muted" style="white-space: pre-wrap">{{ memory.summary if memory and memory.summary else "Nothing yet — I build a short summary as we talk so I remember context next time." }}</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('js/assistant.js') }}" defer></script>{% endblock %}

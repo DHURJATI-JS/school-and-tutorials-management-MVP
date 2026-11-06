@@ -1,0 +1,109 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Fees{% endblock %}
+{% block content %}
+{% call ui.page_header("Fees", ("Cashfree is active — online payments reflect here automatically." if cashfree else "Cashfree is not set up — every payment needs a screenshot / receipt proof."), "fa-indian-rupee-sign") %}
+  <a class="btn btn-ghost" href="/admin/fees/export.csv?status={{ status }}&batch={{ batch }}&period={{ period }}&q={{ q }}" download><i class="fa-solid fa-file-csv me-2"></i>Export</a>
+  <button class="btn btn-ghost" type="button" data-modal-open="#generate-modal"><i class="fa-solid fa-calendar-plus me-2"></i>Generate monthly dues</button>
+  <button class="btn btn-primary" type="button" data-modal-open="#fee-modal"><i class="fa-solid fa-plus me-2"></i>Record fee</button>
+{% endcall %}
+<div class="cn-grid cols-4 mb-4">
+  {% set s = summary %}
+  {{ ui.stat("Paid", (s.paid.amount if s.paid else 0)|money, "fa-circle-check", "success", hint=(s.paid.count if s.paid else 0) ~ " receipts", href="?status=paid") }}
+  {{ ui.stat("Pending", (s.pending.amount if s.pending else 0)|money, "fa-hourglass-half", "warning", hint=(s.pending.count if s.pending else 0) ~ " dues", href="?status=pending") }}
+  {{ ui.stat("Overdue", (s.overdue.amount if s.overdue else 0)|money, "fa-circle-exclamation", "danger", hint=(s.overdue.count if s.overdue else 0) ~ " dues", href="?status=overdue") }}
+  {{ ui.stat("Proofs to verify", (s.verifying.count if s.verifying else 0), "fa-file-image", "info", hint=(s.verifying.amount if s.verifying else 0)|money, href="?status=verifying") }}
+</div>
+<form class="cn-card mb-3 d-flex flex-wrap gap-2 align-items-end" method="get">
+  <div class="flex-grow-1" style="min-width:200px"><label class="form-label">Search</label><input class="form-control" name="q" value="{{ q }}" placeholder="Student, ID or receipt no."></div>
+  <div><label class="form-label">Status</label><select class="form-select" name="status" data-autosubmit><option value="">All</option>
+    {% for v in ["pending", "verifying", "overdue", "paid", "waived"] %}<option value="{{ v }}" {{ 'selected' if v == status }}>{{ v|capitalize }}</option>{% endfor %}</select></div>
+  <div><label class="form-label">Batch</label><select class="form-select" name="batch" data-autosubmit><option value="0">All</option>{% for b in batches %}<option value="{{ b.id }}" {{ 'selected' if b.id == batch }}>{{ b.name }}</option>{% endfor %}</select></div>
+  <div><label class="form-label">Month</label><input class="form-control" type="month" name="period" value="{{ period }}" data-autosubmit></div>
+</form>
+<div class="cn-card flush">
+  {% if fees %}
+  <div class="cn-table-wrap"><table class="cn-table">
+    <thead><tr><th>Student</th><th>Fee</th><th class="num">Amount</th><th>Due</th><th>Status</th><th>Payment</th><th></th></tr></thead>
+    <tbody>{% for f in fees %}<tr>
+      <td>{{ ui.person(f.user, f.user.id_code, "/admin/members/" ~ f.user.id) }}</td>
+      <td><div class="fw-semibold">{{ f.title }}</div><div class="small text-muted">{{ f.period }}{% if f.batch %} · {{ f.batch.name }}{% endif %}</div></td>
+      <td class="num fw-bold">{{ f.amount|money }}</td>
+      <td class="small">{{ f.due_date|d('%d %b') if f.due_date else "—" }}</td>
+      <td>{{ ui.status(f.status) }}{% if f.review_note and f.status != "paid" %}<div class="small text-danger mt-1">{{ f.review_note }}</div>{% endif %}</td>
+      <td class="small">{% if f.status == "paid" %}{{ f.method }} · {{ f.paid_on|d('%d %b') }}{% if f.gateway == "cashfree" %} <span class="cn-badge success">Cashfree</span>{% endif %}<div class="text-muted">{{ f.receipt_no }}</div>
+        {% elif f.status == "verifying" %}{{ f.method }} · UTR {{ f.proof_reference or "—" }}<div class="text-muted">submitted {{ f.proof_submitted_at|timeago }}</div>{% endif %}
+        {% if f.proof_path %}<a href="/files/fee-proof/{{ f.id }}" target="_blank" rel="noopener"><i class="fa-solid fa-image me-1"></i>Proof</a>{% endif %}</td>
+      <td><div class="cn-actions">
+        {% if f.status == "verifying" %}
+        <form method="post" action="/admin/fees/{{ f.id }}/verify" data-confirm="Mark as paid and email the receipt?" data-confirm-tone="primary">{{ csrf_field() }}<button class="btn btn-soft-success btn-sm" type="submit"><i class="fa-solid fa-check me-1"></i>Verify</button></form>
+        <button class="btn btn-soft-danger btn-sm" type="button" data-modal-open="#reject-modal" data-action="/admin/fees/{{ f.id }}/reject">Reject</button>
+        {% elif f.status in ("pending", "overdue") %}
+        <button class="btn btn-soft btn-sm" type="button" data-modal-open="#pay-modal" data-action="/admin/fees/{{ f.id }}/pay">Mark paid</button>
+        <form method="post" action="/admin/fees/{{ f.id }}/waive" data-confirm="Waive this fee?">{{ csrf_field() }}<button class="btn btn-ghost btn-sm" type="submit">Waive</button></form>
+        {% elif f.status == "paid" %}<a class="btn btn-ghost btn-sm" href="/admin/fees/{{ f.id }}/receipt" target="_blank" rel="noopener"><i class="fa-solid fa-receipt me-1"></i>Receipt</a>{% endif %}
+        <form method="post" action="/admin/fees/{{ f.id }}/delete" data-confirm="Delete this fee record?">{{ csrf_field() }}<button class="btn btn-ghost btn-sm" type="submit"><i class="fa-solid fa-trash-can"></i></button></form>
+      </div></td></tr>{% endfor %}</tbody></table></div>
+  {% else %}{{ ui.empty("fa-receipt", "No fee records", "Generate monthly dues from each batch's fee, or record a payment.") }}{% endif %}
+</div>
+{{ ui.pagination(page, pages, "?status=" ~ status ~ "&batch=" ~ batch ~ "&period=" ~ period ~ "&q=" ~ q) }}
+
+{% call ui.modal("fee-modal", "Record a fee", "lg") %}
+<form method="post" action="/admin/fees/new" enctype="multipart/form-data">
+  {{ csrf_field() }}
+  <div class="cn-modal-body cn-form-grid">
+    <div class="cn-field span-2"><label class="form-label">Student <span class="text-danger">*</span></label><select class="form-select" name="user_id" required><option value="">Select…</option>
+      {% for sid, name, code in students %}<option value="{{ sid }}">{{ name }} · {{ code }}</option>{% endfor %}</select></div>
+    <div class="cn-field"><label class="form-label">Batch</label><select class="form-select" name="batch_id"><option value="0">—</option>{% for b in batches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select></div>
+    {{ ui.field("title", "Title", value="Tuition fee") }}
+    {{ ui.field("period", "Month", type="month", value=today().strftime('%Y-%m'), required=True) }}
+    {{ ui.field("amount", "Amount (₹)", type="number", required=True, attrs='step="0.01" min="1"') }}
+    {{ ui.field("due_date", "Due date", type="date") }}
+    {{ ui.select("status", "Status", [("pending", "Pending"), ("paid", "Paid now")]) }}
+    {{ ui.field("paid_on", "Paid on", type="date", value=today().isoformat()) }}
+    {{ ui.select("method", "Method", methods) }}
+    {{ ui.field("reference", "Reference / UTR") }}
+    <div class="cn-field span-2"><label class="form-label">Payment proof {% if proof_required %}<span class="text-danger">* required for “Paid now”</span>{% else %}(optional){% endif %}</label>
+      <input class="form-control" type="file" name="proof" accept="image/png,image/jpeg,image/webp,application/pdf"></div>
+    {{ ui.textarea("notes", "Notes", rows=2, cls="span-2") }}
+    {{ ui.check("email_receipt", "Email the receipt to the student & parent", checked=True, cls="span-2") }}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save</button></div>
+</form>
+{% endcall %}
+{% call ui.modal("pay-modal", "Record payment") %}
+<form method="post" action="#" enctype="multipart/form-data">
+  {{ csrf_field() }}
+  <div class="cn-modal-body cn-form-grid">
+    {{ ui.field("paid_on", "Paid on", type="date", value=today().isoformat()) }}
+    {{ ui.select("method", "Method", methods) }}
+    {{ ui.field("reference", "Reference / UTR", cls="span-2") }}
+    <div class="cn-field span-2"><label class="form-label">Proof (screenshot / receipt photo) {% if proof_required %}<span class="text-danger">*</span>{% endif %}</label>
+      <input class="form-control" type="file" name="proof" accept="image/png,image/jpeg,image/webp,application/pdf" {{ 'required' if proof_required }}>
+      {% if not proof_required %}<div class="form-text">Optional — Cashfree is active.</div>{% endif %}</div>
+    {{ ui.check("email_receipt", "Email the receipt", checked=True, cls="span-2") }}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Mark as paid</button></div>
+</form>
+{% endcall %}
+{% call ui.modal("reject-modal", "Reject payment proof") %}
+<form method="post" action="#">
+  {{ csrf_field() }}
+  <div class="cn-modal-body">{{ ui.textarea("reason", "Reason (sent to the student)", rows=3, required=True, placeholder="e.g. The screenshot is unreadable / amount doesn't match") }}</div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-danger" type="submit">Reject proof</button></div>
+</form>
+{% endcall %}
+{% call ui.modal("generate-modal", "Generate monthly dues") %}
+<form method="post" action="/admin/fees/generate">
+  {{ csrf_field() }}
+  <div class="cn-modal-body">
+    {{ ui.field("period", "Month", type="month", value=today().strftime('%Y-%m'), required=True) }}
+    {{ ui.field("due_date", "Due date", type="date") }}
+    <label class="form-label">Batches (none selected = all batches with a monthly fee)</label>
+    <div class="d-flex flex-wrap gap-2">{% for b in batches if b.monthly_fee > 0 %}<label class="cn-chip"><input class="form-check-input me-1" type="checkbox" name="batch_ids" value="{{ b.id }}">{{ b.name }} · {{ b.monthly_fee|money }}</label>{% endfor %}</div>
+    <p class="small text-muted mt-2 mb-0">Existing dues for the same month are skipped (no duplicates).</p>
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Generate</button></div>
+</form>
+{% endcall %}
+{% endblock %}

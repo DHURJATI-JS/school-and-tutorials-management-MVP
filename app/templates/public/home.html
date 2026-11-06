@@ -1,0 +1,135 @@
+{% extends "layouts/public.html" %}
+{% block title %}{{ site.tagline }}{% endblock %}
+
+{% macro link(url) -%}
+{%- if url == "whatsapp" -%}{{ site.whatsapp_link }}{%- elif url == "email" -%}mailto:{{ site.contact_email }}
+{%- elif url == "phone" -%}tel:{{ site.contact_phone|replace(' ', '') }}{%- else -%}{{ url }}{%- endif -%}
+{%- endmacro %}
+
+{% block content %}
+{% for s in sections %}
+{% set d = s.data or {} %}
+{% set alt = loop.index is even %}
+
+{% if s.kind == "hero" %}
+<section class="cn-hero {{ 'has-image' if d.image }}" {% if d.image %}style="background-image:url('{{ d.image }}')"{% endif %}>
+  {% if d.image %}<div class="cn-hero-veil"></div>{% endif %}
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-7 cn-reveal">
+        {% if d.badge %}<span class="cn-eyebrow">{{ d.badge }}</span>{% endif %}
+        <h1>{{ s.title }}</h1>
+        {% if s.subtitle %}<p class="lead">{{ s.subtitle }}</p>{% endif %}
+        <div class="d-flex flex-wrap gap-3 mt-4">
+          {% if d.primary_label %}<a class="btn btn-primary btn-lg" href="{{ link(d.primary_url) }}">{{ d.primary_label }}</a>{% endif %}
+          {% if d.secondary_label %}<a class="btn btn-ghost btn-lg" href="{{ link(d.secondary_url) }}">{{ d.secondary_label }}</a>{% endif %}
+        </div>
+        {% if s.body %}<div class="cn-rich mt-4">{{ s.body|rich }}</div>{% endif %}
+      </div>
+      <div class="col-lg-5 d-none d-lg-block cn-reveal">
+        <div class="cn-hero-card">
+          <div class="d-flex justify-content-between align-items-center mb-3"><strong>Today at {{ site.site_name }}</strong><span class="cn-badge live">Live</span></div>
+          <div class="cn-mini"><i class="fa-solid fa-video"></i><div><div class="fw-bold">Class 10 Science · Live</div><div class="small text-muted">AI is taking notes…</div></div></div>
+          <div class="cn-mini"><i class="fa-solid fa-file-pen"></i><div><div class="fw-bold">AI-generated test ready</div><div class="small text-muted">15 questions · Algebra</div></div></div>
+          <div class="cn-mini"><i class="fa-solid fa-user-check"></i><div><div class="fw-bold">Attendance auto-marked</div><div class="small text-muted">Watched 50% of the lesson</div></div></div>
+          <div class="cn-mini mb-0"><i class="fa-solid fa-calendar-check"></i><div><div class="fw-bold">Holiday-aware deadlines</div><div class="small text-muted">No homework due on Diwali 🎉</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% elif s.kind == "stats" %}
+<section class="py-5"><div class="container cn-reveal">
+  {% if s.title %}<h2 class="text-center mb-4">{{ s.title }}</h2>{% endif %}
+  <div class="cn-stats-band">{% for it in d["items"] or [] %}<div><strong>{{ it.value }}</strong><span>{{ it.label }}</span></div>{% endfor %}</div>
+</div></section>
+
+{% elif s.kind == "features" %}
+<section class="cn-section {{ 'alt' if alt }}" id="features"><div class="container">
+  <div class="text-center mb-5 cn-reveal"><span class="cn-eyebrow"><i class="fa-solid fa-wand-magic-sparkles"></i>Features</span>
+    <h2 class="cn-section-title">{{ s.title }}</h2>{% if s.subtitle %}<p class="cn-section-sub">{{ s.subtitle }}</p>{% endif %}</div>
+  <div class="row g-4">
+    {% for it in d["items"] or [] %}
+    <div class="col-sm-6 col-lg-4 col-xl-3 cn-reveal"><div class="cn-feature">
+      <div class="cn-fi"><i class="fa-solid {{ it.icon or 'fa-star' }}"></i></div><h3>{{ it.title }}</h3><p>{{ it.text }}</p></div></div>
+    {% endfor %}
+  </div>
+  {% if s.body %}<div class="cn-rich mt-5">{{ s.body|rich }}</div>{% endif %}
+</div></section>
+
+{% elif s.kind == "steps" %}
+<section class="cn-section {{ 'alt' if alt }}"><div class="container">
+  <div class="text-center mb-5 cn-reveal"><h2 class="cn-section-title">{{ s.title }}</h2>{% if s.subtitle %}<p class="cn-section-sub">{{ s.subtitle }}</p>{% endif %}</div>
+  <div class="cn-steps cn-reveal">{% for it in d["items"] or [] %}<div class="cn-step"><h3 class="h5">{{ it.title }}</h3><p class="text-muted mb-0">{{ it.text }}</p></div>{% endfor %}</div>
+</div></section>
+
+{% elif s.kind == "testimonials" %}
+<section class="cn-section {{ 'alt' if alt }}"><div class="container">
+  <div class="text-center mb-5 cn-reveal"><h2 class="cn-section-title">{{ s.title }}</h2>{% if s.subtitle %}<p class="cn-section-sub">{{ s.subtitle }}</p>{% endif %}</div>
+  <div class="row g-4">{% for it in d["items"] or [] %}<div class="col-md-6 col-lg-4 cn-reveal"><div class="cn-quote">
+    <i class="fa-solid fa-quote-left fa-2x mb-3" style="color: var(--cn-primary); opacity:.35"></i><p>{{ it.quote }}</p>
+    <div class="fw-bold">{{ it.name }}</div><div class="small text-muted">{{ it.role }}</div></div></div>{% endfor %}</div>
+</div></section>
+
+{% elif s.kind == "faq" %}
+<section class="cn-section {{ 'alt' if alt }}" id="faq"><div class="container" style="max-width: 860px">
+  <div class="text-center mb-5 cn-reveal"><h2 class="cn-section-title">{{ s.title }}</h2>{% if s.subtitle %}<p class="cn-section-sub">{{ s.subtitle }}</p>{% endif %}</div>
+  <div class="cn-faq cn-reveal">{% for it in d["items"] or [] %}<details {% if loop.first %}open{% endif %}><summary>{{ it.q }}</summary><p>{{ it.a }}</p></details>{% endfor %}</div>
+</div></section>
+
+{% elif s.kind == "gallery" %}
+<section class="cn-section {{ 'alt' if alt }}"><div class="container">
+  <div class="text-center mb-5 cn-reveal"><h2 class="cn-section-title">{{ s.title }}</h2>{% if s.subtitle %}<p class="cn-section-sub">{{ s.subtitle }}</p>{% endif %}</div>
+  <div class="cn-gallery cn-reveal">{% for it in d["items"] or [] %}<figure><img src="{{ it.src }}" alt="{{ it.caption }}" loading="lazy">{% if it.caption %}<figcaption>{{ it.caption }}</figcaption>{% endif %}</figure>{% endfor %}</div>
+</div></section>
+
+{% elif s.kind == "richtext" %}
+<section class="cn-section {{ 'alt' if alt }}"><div class="container" style="max-width: 900px">
+  {% if s.title %}<h2 class="cn-section-title text-center">{{ s.title }}</h2>{% endif %}
+  {% if s.subtitle %}<p class="cn-section-sub text-center mb-4">{{ s.subtitle }}</p>{% endif %}
+  <div class="cn-rich cn-reveal">{{ s.body|rich }}</div>
+</div></section>
+
+{% elif s.kind == "cta" %}
+<section class="py-5"><div class="container cn-reveal"><div class="cn-cta">
+  <h2 class="cn-section-title">{{ s.title }}</h2>{% if s.subtitle %}<p class="lead mb-4">{{ s.subtitle }}</p>{% endif %}
+  <div class="d-flex flex-wrap justify-content-center gap-3">
+    {% if d.primary_label %}<a class="btn btn-light btn-lg" href="{{ link(d.primary_url) }}" {% if d.primary_url == 'whatsapp' %}target="_blank" rel="noopener"{% endif %}>
+      {% if d.primary_url == 'whatsapp' %}<i class="fa-brands fa-whatsapp me-2"></i>{% endif %}{{ d.primary_label }}</a>{% endif %}
+    {% if d.secondary_label %}<a class="btn btn-outline-light btn-lg" href="{{ link(d.secondary_url) }}">{{ d.secondary_label }}</a>{% endif %}
+  </div>
+</div></div></section>
+
+{% elif s.kind == "contact" %}
+<section class="cn-section {{ 'alt' if alt }}" id="contact"><div class="container">
+  <div class="text-center mb-5 cn-reveal"><span class="cn-eyebrow"><i class="fa-solid fa-envelope"></i>Contact</span>
+    <h2 class="cn-section-title">{{ s.title }}</h2>{% if s.subtitle %}<p class="cn-section-sub">{{ s.subtitle }}</p>{% endif %}</div>
+  <div class="row g-4">
+    <div class="col-lg-5 cn-reveal">
+      <a class="cn-contact-card" href="mailto:{{ site.contact_email }}"><i class="fa-solid fa-envelope"></i><div><div class="small text-muted">Email</div><div class="fw-bold">{{ site.contact_email }}</div></div></a>
+      <a class="cn-contact-card whatsapp" href="{{ site.whatsapp_link }}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i><div><div class="small text-muted">WhatsApp</div><div class="fw-bold">{{ site.contact_whatsapp }}</div></div></a>
+      <a class="cn-contact-card" href="tel:{{ site.contact_phone|replace(' ', '') }}"><i class="fa-solid fa-phone"></i><div><div class="small text-muted">Phone</div><div class="fw-bold">{{ site.contact_phone }}</div></div></a>
+      <div class="cn-contact-card"><i class="fa-solid fa-location-dot"></i><div><div class="small text-muted">Address</div><div class="fw-bold">{{ site.contact_address }}</div></div></div>
+    </div>
+    {% if d.show_form %}
+    <div class="col-lg-7 cn-reveal"><div class="cn-card">
+      <form method="post" action="/contact" class="cn-form-grid">
+        {{ csrf_field() }}
+        <input type="text" name="website" tabindex="-1" autocomplete="off" class="d-none" aria-hidden="true">
+        <div class="cn-field"><label class="form-label" for="c-name">Your name</label><input class="form-control" id="c-name" name="name" required maxlength="120"></div>
+        <div class="cn-field"><label class="form-label" for="c-email">Email</label><input class="form-control" id="c-email" name="email" type="email" required></div>
+        <div class="cn-field span-2"><label class="form-label" for="c-phone">Phone (optional)</label><input class="form-control" id="c-phone" name="phone" maxlength="30"></div>
+        <div class="cn-field span-2"><label class="form-label" for="c-msg">Message</label><textarea class="form-control" id="c-msg" name="message" rows="4" required maxlength="4000"></textarea></div>
+        <div class="span-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span class="small text-muted">We reply within one working day.</span>
+          <button class="btn btn-primary" type="submit" data-loading="Sending…"><i class="fa-solid fa-paper-plane me-2"></i>Send message</button>
+        </div>
+      </form>
+    </div></div>
+    {% endif %}
+  </div>
+</div></section>
+{% endif %}
+{% endfor %}
+{% endblock %}

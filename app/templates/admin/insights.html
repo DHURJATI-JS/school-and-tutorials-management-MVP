@@ -1,0 +1,39 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}AI insights{% endblock %}
+{% block content %}
+{% call ui.page_header("AI insights", "Daily analysis of scores, attendance and submissions. Admins, batch teachers and parents are alerted; students with special needs get gentle wording.", "fa-wand-magic-sparkles") %}
+  <form method="post" action="/admin/insights/run">{{ csrf_field() }}<button class="btn btn-primary" type="submit"><i class="fa-solid fa-play me-2"></i>Run analysis now</button></form>
+{% endcall %}
+<div class="cn-grid cols-3 mb-4">
+  {{ ui.stat("Warnings", counts.get("warning", 0), "fa-circle-exclamation", "danger", href="?level=warning") }}
+  {{ ui.stat("Needs attention", counts.get("concern", 0), "fa-triangle-exclamation", "warning", href="?level=concern") }}
+  {{ ui.stat("Improving", counts.get("info", 0), "fa-arrow-trend-up", "success", href="?level=info") }}
+</div>
+<form class="d-flex flex-wrap gap-2 mb-3" method="get">
+  <select class="form-select" style="width:auto" name="level" data-autosubmit><option value="">All levels</option>{% for v, l in [("warning", "Warning"), ("concern", "Needs attention"), ("info", "Improving")] %}<option value="{{ v }}" {{ 'selected' if v == level }}>{{ l }}</option>{% endfor %}</select>
+  <select class="form-select" style="width:auto" name="batch" data-autosubmit><option value="0">All batches</option>{% for b in batches %}<option value="{{ b.id }}" {{ 'selected' if b.id == batch }}>{{ b.name }}</option>{% endfor %}</select>
+  <select class="form-select" style="width:auto" name="show" data-autosubmit><option value="open" {{ 'selected' if show == 'open' }}>Open</option><option value="all" {{ 'selected' if show == 'all' }}>All</option></select>
+</form>
+{% if alerts %}
+<div class="cn-grid">
+  {% for a in alerts %}
+  <div class="cn-card" style="{{ 'opacity:.65' if a.resolved }}">
+    <div class="d-flex flex-wrap gap-3 align-items-start">
+      {{ ui.avatar(a.user, 44) }}
+      <div class="flex-grow-1 min-w-0">
+        <div class="d-flex flex-wrap gap-2 align-items-center">{{ ui.level(a.level) }}<span class="fw-bold">{{ a.title }}</span>
+          {% if a.user.special_needs %}<span class="cn-badge info"><i class="fa-solid fa-hand-holding-heart"></i>Gentle tone</span>{% endif %}
+          <span class="cn-chip"><i class="fa-solid {{ 'fa-robot' if a.source == 'ai' else 'fa-list-check' }}"></i>{{ "AI-written" if a.source == "ai" else "Rule-based" }}</span></div>
+        <p class="mb-2 mt-2">{{ a.message }}</p>
+        <div class="small text-muted">{{ a.batch.name if a.batch else "" }} · avg {{ a.metrics.avg_score if a.metrics.avg_score is not none else "—" }}% · attendance {{ a.metrics.attendance if a.metrics.attendance is not none else "—" }}% · missing tasks {{ a.metrics.missing_tasks }} · notified {{ (a.notified or [])|join(", ") }} · {{ a.created_at|timeago }}</div>
+        {% if a.parent_message %}<details class="mt-2"><summary class="small fw-semibold">Message sent to the parent</summary><div class="small mt-2" style="white-space: pre-wrap">{{ a.parent_message }}</div></details>{% endif %}
+      </div>
+      <div class="cn-actions"><a class="btn btn-ghost btn-sm" href="/admin/members/{{ a.user_id }}">Profile</a>
+        <form method="post" action="/admin/insights/{{ a.id }}/resolve">{{ csrf_field() }}<button class="btn btn-soft btn-sm" type="submit">{{ "Reopen" if a.resolved else "Resolve" }}</button></form></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}<div class="cn-card">{{ ui.empty("fa-face-smile-beam", "Nothing to worry about", "When scores, attendance or submissions slip, the AI flags it here.") }}</div>{% endif %}
+{% endblock %}

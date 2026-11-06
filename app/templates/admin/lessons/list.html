@@ -1,0 +1,33 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Classes{% endblock %}
+{% macro row(l) %}
+{% set held = l.meeting and l.meeting.status in ("live", "ended") %}
+<tr>
+  <td><a class="fw-bold" href="/admin/lessons/{{ l.id }}">{{ l.title }}</a><div class="small text-muted">{{ l.batch.name }}</div></td>
+  <td>{{ l.date|d('%a %d %b') }}<div class="small text-muted">{{ l.start_time|t }} – {{ l.end_time|t }}</div></td>
+  <td>{% if l.status == "cancelled" %}{{ ui.status("cancelled") }}
+    {% elif l.video %}<span class="cn-badge success"><i class="fa-solid fa-film"></i>Pre-recorded video</span>
+    {% elif l.meeting and l.meeting.status == "live" %}<span class="cn-badge live">Live now</span>
+    {% elif held %}<span class="cn-badge neutral"><i class="fa-solid fa-check"></i>Live class held</span>
+    {% else %}<span class="cn-badge warning"><i class="fa-solid fa-triangle-exclamation"></i>Live class mandatory</span>{% endif %}</td>
+  <td><div class="cn-actions">
+    {% if l.status == "scheduled" and not l.video and not held %}<form method="post" action="/admin/lessons/{{ l.id }}/start">{{ csrf_field() }}<button class="btn btn-primary btn-sm" type="submit"><i class="fa-solid fa-video me-1"></i>Start</button></form>{% endif %}
+    <a class="btn btn-soft btn-sm" href="/admin/lessons/{{ l.id }}">Open</a></div></td>
+</tr>
+{% endmacro %}
+{% block content %}
+{% call ui.page_header("Classes", "Attach a pre-recorded video, or a live class becomes mandatory (admins are warned by email).", "fa-chalkboard-user") %}
+  <a class="btn btn-ghost" href="/admin/videos"><i class="fa-solid fa-film me-2"></i>Video library</a>
+  <a class="btn btn-primary" href="/admin/lessons/new"><i class="fa-solid fa-plus me-2"></i>Schedule class</a>
+{% endcall %}
+<div class="cn-tabset">
+  <div class="cn-tabs mb-3" data-tabs><button type="button" data-tab="upcoming">Upcoming ({{ upcoming|length }})</button><button type="button" data-tab="recent">Last 30 days ({{ recent|length }})</button></div>
+  <div class="cn-tab-panel" id="upcoming"><div class="cn-card flush">
+    {% if upcoming %}<div class="cn-table-wrap"><table class="cn-table"><thead><tr><th>Class</th><th>When</th><th>Mode</th><th></th></tr></thead><tbody>{% for l in upcoming %}{{ row(l) }}{% endfor %}</tbody></table></div>
+    {% else %}{{ ui.empty("fa-calendar-plus", "No upcoming classes", "", "/admin/lessons/new", "Schedule class") }}{% endif %}</div></div>
+  <div class="cn-tab-panel" id="recent"><div class="cn-card flush">
+    {% if recent %}<div class="cn-table-wrap"><table class="cn-table"><thead><tr><th>Class</th><th>When</th><th>Mode</th><th></th></tr></thead><tbody>{% for l in recent %}{{ row(l) }}{% endfor %}</tbody></table></div>
+    {% else %}{{ ui.empty("fa-clock-rotate-left", "No recent classes") }}{% endif %}</div></div>
+</div>
+{% endblock %}

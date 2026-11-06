@@ -1,0 +1,6 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<p>These deleted accounts reached the end of their {{ days }}-day dormancy and were <strong>permanently removed</strong> from {{ site.site_name }}, together with their files, messages and records:</p>
+<ul>{% for p in people %}<li>{{ p }}</li>{% endfor %}</ul>
+<p>This can't be undone. Comments that others had replied to stay as “Deleted user” placeholders so the threads still read.</p>
+{% endblock %}

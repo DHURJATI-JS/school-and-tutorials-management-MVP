@@ -1,0 +1,74 @@
+# =====================================================================================
+#  ClassNest - files that must never be committed
+# =====================================================================================
+
+# ---- Secrets -------------------------------------------------------------------------
+# .env holds the SECRET_KEY, admin passwords, the Anthropic / gateway API keys, SMTP and
+# Cashfree credentials. Only the template is tracked.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+certs/
+
+# ---- Personal data (students & staff) --------------------------------------------------
+# Photos, ID proofs, ID cards, payment screenshots, salary slips, homework, recordings...
+uploads/
+# Spreadsheet exports and database dumps contain names, fees and marks
+/*.csv
+exports/
+backups/
+# Load-test scratch: generated sign-in list and raw run output (the published results live in docs/load-test/)
+loadtest/locust_accounts.json
+results/
+*.dump
+*.sql.gz
+# Plain-text moderation word list from `python -m app.cli wordlist-export` (keep it encoded in app/data/)
+words.json
+wordlists*.json
+
+# ---- Python ---------------------------------------------------------------------------
+.venv/
+.venv-*/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# ---- Generated at startup ---------------------------------------------------------------
+# Minified, fingerprinted CSS/JS (rebuilt from app/static/css + app/static/js on every start)
+app/static/dist/
+
+# ---- Local AI model --------------------------------------------------------------------
+# run.py keeps the vLLM API key and download log inside .venv/; these cover manual setups
+hf-cache/
+.cache/huggingface/
+models/
+*.safetensors
+*.gguf
+
+# ---- Logs -----------------------------------------------------------------------------
+*.log
+logs/
+
+# ---- Editors / OS -----------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*~
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -1,0 +1,48 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Calendar & holidays{% endblock %}
+{% block content %}
+{% call ui.page_header("Calendar & holidays", "Holidays block assignments and deadlines. Vacations (e.g. May) allow holiday homework only. Drag across days to add one.", "fa-calendar-days") %}
+  <form method="post" action="/admin/holidays/seed" class="d-flex gap-2">{{ csrf_field() }}
+    <input class="form-control" type="number" name="year" value="{{ today().year }}" style="width: 110px" aria-label="Year">
+    <button class="btn btn-ghost" type="submit" title="Republic Day, Independence Day, Gandhi Jayanti, Christmas + summer vacation in May"><i class="fa-solid fa-flag me-2"></i>Add national holidays</button></form>
+  <button class="btn btn-primary" type="button" data-modal-open="#holiday-modal"><i class="fa-solid fa-plus me-2"></i>Add holiday</button>
+{% endcall %}
+<div class="cn-grid" style="grid-template-columns: minmax(0, 2.4fr) minmax(280px, 1fr)">
+  <div class="cn-card">
+    <div class="cn-legend mb-3"><span style="--c: rgba(239,68,68,.35)">Holiday (nothing allowed)</span><span style="--c: rgba(245,158,11,.4)">Vacation (holiday homework only)</span>
+      <span style="--c: color-mix(in srgb, var(--cn-muted) 25%, transparent)">Weekly off</span><span style="--c: var(--cn-primary)">Classes & tasks (batch colour)</span></div>
+    <div id="cn-calendar" data-selectable="1"></div>
+  </div>
+  <div class="cn-card">
+    <div class="cn-card-head"><h3>Upcoming holidays</h3></div>
+    <ul class="cn-list">
+      {% for h in holidays %}
+      <li class="align-items-start"><span class="cn-badge {{ 'warning' if h.kind == 'vacation' else 'danger' }}">{{ "Vacation" if h.kind == "vacation" else "Holiday" }}</span>
+        <div class="flex-grow-1 small"><div class="fw-bold">{{ h.title }}</div><div class="text-muted">{{ h.start_date|d('%d %b') }}{% if h.end_date != h.start_date %} – {{ h.end_date|d('%d %b %Y') }}{% else %} {{ h.start_date.year }}{% endif %}</div>
+          {% if h.allow_homework %}<div class="text-success"><i class="fa-solid fa-book me-1"></i>Holiday homework allowed</div>{% endif %}</div>
+        <form method="post" action="/admin/holidays/{{ h.id }}/delete" data-confirm="Remove “{{ h.title }}”?">{{ csrf_field() }}<button class="btn btn-ghost btn-sm" type="submit"><i class="fa-solid fa-trash-can"></i></button></form></li>
+      {% else %}<li class="text-muted small">No holidays yet. Use “Add national holidays” to start.</li>{% endfor %}
+    </ul>
+    <p class="small text-muted mt-3 mb-0"><i class="fa-solid fa-circle-info me-1"></i>Weekly off: {% for d in weekly_off %}{{ C.WEEKDAY_SHORT[d] }}{{ ", " if not loop.last }}{% else %}none{% endfor %} (WEEKLY_OFF_DAYS in .env).</p>
+  </div>
+</div>
+{% call ui.modal("holiday-modal", "Add holiday or vacation") %}
+<form method="post" action="/admin/holidays">
+  {{ csrf_field() }}
+  <div class="cn-modal-body cn-form-grid">
+    {{ ui.field("title", "Name", required=True, cls="span-2", placeholder="e.g. Diwali, Summer vacation") }}
+    {{ ui.field("start_date", "From", type="date", required=True) }}
+    {{ ui.field("end_date", "To (optional)", type="date") }}
+    {{ ui.select("kind", "Type", [("holiday", "Holiday — block all tasks & deadlines"), ("vacation", "Vacation — holiday homework only")], cls="span-2") }}
+    {{ ui.check("allow_homework", "Allow holiday homework during this vacation", checked=True, cls="span-2") }}
+    {{ ui.textarea("description", "Note", rows=2, cls="span-2") }}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Add to calendar</button></div>
+</form>
+{% endcall %}
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js" integrity="sha384-B1OFx8Gy9GjPu8UbUyXbGQpzll9ubAUQ9agInFJ8NnD7nYG1u/CLR+Sqr5yifl4q" crossorigin="anonymous" defer></script>
+<script src="{{ asset('js/calendar.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "emails/base.html" %}
+{% block content %}
+{% if audience == "admin" %}
+<h1 style="margin:0 0 10px;font-size:21px;color:#b91c1c;">🚫 Automatic IP ban</h1>
+<p><strong>{{ name }}</strong> ({{ role }}) was automatically blocked.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;margin:10px 0;">
+  <tr><td style="padding:3px 14px 3px 0;color:#64748b;">IP address</td><td><strong>{{ ip }}</strong></td></tr>
+  <tr><td style="padding:3px 14px 3px 0;color:#64748b;">Where</td><td>{{ where }}</td></tr>
+  <tr><td style="padding:3px 14px 3px 0;color:#64748b;">Strikes</td><td>{{ strikes }}</td></tr>
+  <tr><td style="padding:3px 14px 3px 0;color:#64748b;">Ban expires</td><td>{{ expires|dt if expires else "Never (permanent)" }}</td></tr>
+</table>
+<p><strong>Reason:</strong> {{ reason }}</p>
+{% if excerpts %}<p><strong>Recent filtered messages</strong> (abusive words masked):</p><ul>{% for e in excerpts %}<li style="color:#475569;">{{ e }}</li>{% endfor %}</ul>{% endif %}
+<p>You can lift the ban any time from <em>Admin → Security</em>.</p>
+{% else %}
+<h1 style="margin:0 0 10px;font-size:21px;">Your access has been blocked</h1>
+<p>Dear {{ name }},</p>
+<p>Your access to <strong>{{ site.site_name }}</strong> from your current network has been blocked automatically.</p>
+<p><strong>Why:</strong> {{ reason }}</p>
+<p>{% if expires %}The block will be lifted on <strong>{{ expires|dt }}</strong>.{% else %}The block stays until the administrator reviews it.{% endif %} The administration has been informed.</p>
+<p>Everyone deserves a respectful place to learn. If you believe this was a mistake, reply to this email or contact the office.</p>
+{% endif %}
+{% endblock %}

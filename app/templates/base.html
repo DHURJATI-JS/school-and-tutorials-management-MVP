@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" data-mdb-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="csp-nonce" content="{{ csp_nonce }}">
+  <title>{% block title %}{{ site.tagline }}{% endblock %} · {{ site.site_name }}</title>
+  <meta name="description" content="{{ site.tagline }}">
+  <meta name="theme-color" content="{{ site.primary_color }}">
+  {% if site.logo_url %}
+  <link rel="icon" href="{{ site.logo_url }}">
+  <link rel="apple-touch-icon" href="{{ site.logo_url }}">
+  {% else %}
+  <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/static/img/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+  {% endif %}
+  <link rel="manifest" href="/site.webmanifest">
+  <script nonce="{{ csp_nonce }}">(function(){try{var t=localStorage.getItem('cn-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-mdb-theme',t);}catch(e){}})();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha384-PPIZEGYM1v8zp5Py7UjFb79S58UeqCL9pYVnVPURKEqvioPROaVAJKKLzvH2rDnI" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/7.3.2/mdb.min.css" integrity="sha384-kj1RBJ7aqGUnavWQDbYyovF5HQGHlvNf6SZ2CfaCNkoBJBEux2JXFCXqGZTAYENh" crossorigin="anonymous">
+  {% block head %}{% endblock %}
+  <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+  <style>:root{--cn-primary:{{ site.primary_color }};--cn-accent:{{ site.accent_color }};}</style>
+</head>
+<body class="{% block body_class %}{% endblock %}" data-csrf="{{ csrf_token }}">
+  <div id="cn-progress" aria-hidden="true"></div>
+  {% block body %}{% endblock %}
+  <div class="cn-toasts" id="cn-toasts" role="status" aria-live="polite"></div>
+  <script type="application/json" id="cn-flashes">{{ page_json(flashes) }}</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/7.3.2/mdb.umd.min.js" integrity="sha384-TGRlbFTmiVIUuSy+b/aj9mHaUTABC3gid02pJimnu14vfLMvOzODXgRmw03nf7vs" crossorigin="anonymous" defer></script>
+  <script src="{{ asset('js/app.js') }}" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

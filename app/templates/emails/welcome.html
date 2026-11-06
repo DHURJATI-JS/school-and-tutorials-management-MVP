@@ -1,0 +1,18 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1 style="margin:0 0 12px;font-size:24px;color:#0f172a;">Thank you for joining, {{ member.first_name }}! 🎉</h1>
+<p>We're delighted to welcome {% if member.is_student %}you{% if member.parent_name %} and your family{% endif %}{% else %}you to the team{% endif %} at <strong>{{ site.site_name }}</strong>.</p>
+{% if member.is_student %}
+<p>Here's what you can look forward to:</p>
+<ul style="padding-left:20px;margin:0 0 14px;">
+  <li>Live classes with screen sharing — and recordings if you miss one</li>
+  <li>AI-made class notes and a 24×7 AI doubt solver</li>
+  <li>Tests and homework on your personal calendar (never due on holidays!)</li>
+</ul>
+{% if batches %}<p>You're enrolled in: <strong>{{ batches|join(", ") }}</strong>.</p>{% endif %}
+{% else %}
+<p>You'll find your schedule, salary slips and tools in your staff portal.</p>
+{% endif %}
+<p>Your login details and your <strong>virtual ID card</strong> are in a separate email marked <em>confidential</em>.</p>
+<p style="margin-top:22px;">Warm regards,<br><strong>Team {{ site.site_name }}</strong></p>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Salaries{% endblock %}
+{% block content %}
+{% call ui.page_header("Salaries & payouts", ("Cashfree Payouts is active — pay staff directly; statements update automatically." if payouts else "Cashfree Payouts is not set up — upload the salary receipt / transfer proof for every payment."), "fa-money-check-dollar") %}
+  <a class="btn btn-ghost" href="/admin/salaries/export.csv" download><i class="fa-solid fa-file-csv me-2"></i>Export</a>
+  {% if payouts %}<button class="btn btn-ghost" type="button" data-modal-open="#payout-modal"><i class="fa-solid fa-bolt me-2"></i>Pay via Cashfree</button>{% endif %}
+  <button class="btn btn-primary" type="button" data-modal-open="#salary-modal"><i class="fa-solid fa-plus me-2"></i>Record payment</button>
+{% endcall %}
+{% if totals %}<div class="cn-grid cols-4 mb-4">{% for period, amount in totals[:4] %}{{ ui.stat(period, amount|money, "fa-calendar", "primary") }}{% endfor %}</div>{% endif %}
+<div class="cn-card flush">
+  {% if payments %}
+  <div class="cn-table-wrap"><table class="cn-table"><thead><tr><th>Staff member</th><th>Payment</th><th class="num">Amount</th><th>Status</th><th>Proof / reference</th><th></th></tr></thead><tbody>
+    {% for p in payments %}<tr><td>{{ ui.person(p.user, p.user.role_label, "/admin/members/" ~ p.user.id) }}</td>
+      <td><div class="fw-semibold">{{ p.title }}</div><div class="small text-muted">{{ p.period }} · {{ p.method or "—" }}{% if p.paid_on %} · {{ p.paid_on|d('%d %b') }}{% endif %}</div></td>
+      <td class="num fw-bold">{{ p.amount|money }}</td>
+      <td>{{ ui.status(p.status) }}{% if p.failure_reason %}<div class="small text-danger">{{ p.failure_reason }}</div>{% endif %}</td>
+      <td class="small">{% if p.receipt_path %}<a href="/files/salary/{{ p.id }}" target="_blank" rel="noopener"><i class="fa-solid fa-file-invoice me-1"></i>Receipt</a>{% endif %}
+        {% if p.payout_reference %}<div class="text-muted">CF {{ p.payout_reference }}</div>{% elif p.reference %}<div class="text-muted">{{ p.reference }}</div>{% endif %}</td>
+      <td><div class="cn-actions">
+        {% if p.status == "paid" %}<a class="btn btn-ghost btn-sm" href="/admin/salaries/{{ p.id }}/slip" target="_blank" rel="noopener">Slip</a>{% endif %}
+        {% if p.status in ("processing", "failed") and payouts %}<form method="post" action="/admin/salaries/{{ p.id }}/sync">{{ csrf_field() }}<button class="btn btn-soft btn-sm" type="submit">{{ "Retry" if p.status == "failed" else "Refresh" }}</button></form>{% endif %}
+        <form method="post" action="/admin/salaries/{{ p.id }}/delete" data-confirm="Delete this salary record?">{{ csrf_field() }}<button class="btn btn-ghost btn-sm" type="submit"><i class="fa-solid fa-trash-can"></i></button></form>
+      </div></td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}{{ ui.empty("fa-money-check-dollar", "No salary payments yet", "Record payouts for teachers, cleaners, coordinators and everyone else — they can download their slips.") }}{% endif %}
+</div>
+{% call ui.modal("salary-modal", "Record a salary payment", "lg") %}
+<form method="post" action="/admin/salaries/new" enctype="multipart/form-data">
+  {{ csrf_field() }}
+  <div class="cn-modal-body cn-form-grid">
+    <div class="cn-field span-2"><label class="form-label">Staff member <span class="text-danger">*</span></label><select class="form-select" name="user_id" required><option value="">Select…</option>
+      {% for s in staff %}<option value="{{ s.id }}">{{ s.full_name }} · {{ s.role_label }}{% if s.monthly_salary %} · {{ s.monthly_salary|money }}{% endif %}</option>{% endfor %}</select></div>
+    {{ ui.field("title", "Title", value="Salary") }}
+    {{ ui.field("period", "Month", type="month", value=today().strftime('%Y-%m'), required=True) }}
+    {{ ui.field("amount", "Amount (₹)", type="number", required=True, attrs='step="0.01" min="1"') }}
+    {{ ui.field("paid_on", "Paid on", type="date", value=today().isoformat()) }}
+    {{ ui.select("method", "Method", methods, selected="Bank transfer") }}
+    {{ ui.field("reference", "Reference / UTR") }}
+    <div class="cn-field span-2"><label class="form-label">Salary receipt / transfer proof {% if proof_required %}<span class="text-danger">*</span>{% else %}(optional){% endif %}</label>
+      <input class="form-control" type="file" name="receipt" accept="image/png,image/jpeg,image/webp,application/pdf" {{ 'required' if proof_required }}>
+      <div class="form-text">The staff member can download it from their portal.</div></div>
+    {{ ui.textarea("notes", "Notes", rows=2, cls="span-2") }}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save & notify</button></div>
+</form>
+{% endcall %}
+{% if payouts %}
+{% call ui.modal("payout-modal", "Pay via Cashfree Payouts") %}
+<form method="post" action="/admin/salaries/payout" data-confirm="Send this payout through Cashfree now?" data-confirm-tone="primary" data-confirm-ok="Send payout">
+  {{ csrf_field() }}
+  <div class="cn-modal-body cn-form-grid">
+    <div class="cn-field span-2"><label class="form-label">Staff member</label><select class="form-select" name="user_id" required><option value="">Select…</option>
+      {% for s in staff %}<option value="{{ s.id }}" {{ 'disabled' if not (s.bank_account_number or s.upi_id) }}>{{ s.full_name }}{{ " — add bank/UPI first" if not (s.bank_account_number or s.upi_id) }}</option>{% endfor %}</select></div>
+    {{ ui.field("title", "Title", value="Salary") }}
+    {{ ui.field("period", "Month", type="month", value=today().strftime('%Y-%m'), required=True) }}
+    {{ ui.field("amount", "Amount (₹)", type="number", required=True, attrs='step="0.01" min="1"', cls="span-2") }}
+    {{ ui.textarea("notes", "Notes", rows=2, cls="span-2") }}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit"><i class="fa-solid fa-bolt me-2"></i>Pay now</button></div>
+</form>
+{% endcall %}
+{% endif %}
+{% endblock %}

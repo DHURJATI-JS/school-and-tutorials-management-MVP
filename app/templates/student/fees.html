@@ -1,0 +1,51 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Fees{% endblock %}
+{% block content %}
+{% call ui.page_header("Fees", "Pay online with Cashfree — it reflects instantly." if cashfree else "Pay by UPI / bank transfer, then upload the payment screenshot as proof.", "fa-indian-rupee-sign") %}
+  <a class="btn btn-ghost" href="/student/fees/statement"><i class="fa-solid fa-file-invoice me-2"></i>Statement</a>
+{% endcall %}
+<div class="cn-grid cols-3 mb-4">
+  {{ ui.stat("Due", due|money, "fa-hourglass-half", "danger" if due else "success") }}
+  {{ ui.stat("Being verified", verifying|money, "fa-file-image", "info") }}
+  {{ ui.stat("Paid so far", paid|money, "fa-circle-check", "success") }}
+</div>
+<div class="cn-card flush">
+  {% if fees %}
+  <div class="cn-table-wrap"><table class="cn-table"><thead><tr><th>Fee</th><th class="num">Amount</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>
+    {% for f in fees %}<tr>
+      <td><div class="fw-semibold">{{ f.title }}</div><div class="small text-muted">{{ f.period }}{% if f.batch %} · {{ f.batch.name }}{% endif %}</div></td>
+      <td class="num fw-bold">{{ f.amount|money }}</td><td class="small">{{ f.due_date|d('%d %b') if f.due_date else "—" }}</td>
+      <td>{{ ui.status(f.status, "Verifying proof" if f.status == "verifying" else None) }}
+        {% if f.review_note and f.status in ("pending", "overdue") %}<div class="small text-danger mt-1"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ f.review_note }}</div>{% endif %}</td>
+      <td><div class="cn-actions">
+        {% if f.status == "paid" %}<a class="btn btn-ghost btn-sm" href="/student/fees/{{ f.id }}/receipt" target="_blank" rel="noopener"><i class="fa-solid fa-receipt me-1"></i>Receipt</a>
+        {% elif f.is_due %}
+          {% if cashfree %}
+          <form method="post" action="/student/fees/{{ f.id }}/pay-online">{{ csrf_field() }}<button class="btn btn-primary btn-sm" type="submit" data-loading="Opening Cashfree…"><i class="fa-solid fa-bolt me-1"></i>Pay online</button></form>
+          {% else %}
+          <button class="btn btn-primary btn-sm" type="button" data-modal-open="#proof-modal" data-action="/student/fees/{{ f.id }}/proof"><i class="fa-solid fa-upload me-1"></i>Upload payment proof</button>
+          {% endif %}
+        {% endif %}
+      </div></td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}{{ ui.empty("fa-receipt", "No fees yet", "Your fee dues and receipts will appear here.") }}{% endif %}
+</div>
+{% if not cashfree %}
+{% call ui.modal("proof-modal", "Upload payment proof") %}
+<form method="post" action="#" enctype="multipart/form-data">
+  {{ csrf_field() }}
+  <div class="cn-modal-body">
+    <div class="cn-callout info"><i class="fa-solid fa-circle-info"></i><div class="small">Pay to the institute's UPI / bank account, then attach a clear screenshot of the successful payment. The office verifies it and emails your receipt.</div></div>
+    {{ ui.select("method", "Paid via", methods) }}
+    {{ ui.field("reference", "UPI / transaction reference (UTR)", placeholder="12-digit UTR") }}
+    {{ ui.field("paid_on", "Payment date", type="date", value=today().isoformat()) }}
+    <div class="cn-field"><label class="form-label">Screenshot <span class="text-danger">*</span></label>
+      <input class="form-control" type="file" name="screenshot" accept="image/png,image/jpeg,image/webp" required data-preview="#proof-preview">
+      <img id="proof-preview" alt="" hidden class="mt-2 rounded-3" style="max-height: 220px"></div>
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit" data-loading="Uploading…">Submit proof</button></div>
+</form>
+{% endcall %}
+{% endif %}
+{% endblock %}

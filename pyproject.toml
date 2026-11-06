@@ -1,0 +1,18 @@
+# Tool settings only. ClassNest is an application, not a package: install it with requirements.txt
+# (python app.py does that for you).
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = [".venv*", "app/static/dist"]
+
+[tool.ruff.lint]
+# pyflakes, pycodestyle's error classes and bugbear: the rules that catch real bugs
+select = ["E4", "E7", "E9", "F", "B"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI declares dependencies and parameters as call defaults - that is its documented pattern
+extend-immutable-calls = [
+    "fastapi.Body", "fastapi.Cookie", "fastapi.Depends", "fastapi.File", "fastapi.Form",
+    "fastapi.Header", "fastapi.Path", "fastapi.Query", "fastapi.Security",
+]

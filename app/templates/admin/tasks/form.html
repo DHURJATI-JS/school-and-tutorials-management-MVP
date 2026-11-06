@@ -1,0 +1,25 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}New task{% endblock %}
+{% block content %}
+{% call ui.page_header("New task", "Holidays and weekly offs can't be assignment dates or deadlines. During vacations only holiday homework is allowed.", "fa-list-check") %}
+  <a class="btn btn-ghost" href="/admin/tasks"><i class="fa-solid fa-arrow-left me-2"></i>Back</a>
+{% endcall %}
+<form method="post" action="/admin/tasks/new" enctype="multipart/form-data" class="cn-card" style="max-width: 900px">
+  {{ csrf_field() }}
+  <div class="cn-form-grid">
+    <div class="cn-field"><label class="form-label">Batch <span class="text-danger">*</span></label><select class="form-select" name="batch_id" required>
+      <option value="">Select…</option>{% for b in batches %}<option value="{{ b.id }}" {{ 'selected' if b.id == batch or values.get('batch_id') == b.id|string }}>{{ b.name }}</option>{% endfor %}</select></div>
+    {{ ui.select("kind", "Type", C.TASK_KINDS.items()|rejectattr("0", "equalto", "test")|list, selected=values.get("kind", "assignment")) }}
+    {{ ui.field("title", "Title", value=values.get("title", ""), required=True, cls="span-2") }}
+    {{ ui.textarea("description", "Instructions", value=values.get("description", ""), rows=4, cls="span-2") }}
+    {{ ui.field("assign_date", "Assignment date", type="date", value=values.get("assign_date", today().isoformat()), required=True, attrs="data-dayinfo") }}
+    {{ ui.field("due_date", "Deadline", type="date", value=values.get("due_date", ""), required=True, attrs="data-dayinfo") }}
+    {{ ui.field("max_marks", "Maximum marks", type="number", value=values.get("max_marks", ""), attrs='step="0.5" min="0"') }}
+    <div class="cn-field"><label class="form-label">Attachment</label><input class="form-control" type="file" name="attachment"></div>
+    {{ ui.check("is_holiday_homework", "Holiday homework (allowed during vacations such as the May summer break)", checked=values.get("is_holiday_homework"), cls="span-2") }}
+    {{ ui.check("notify_email", "Also email students", checked=True, cls="span-2") }}
+  </div>
+  <div class="text-end"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-paper-plane me-2"></i>Assign task</button></div>
+</form>
+{% endblock %}

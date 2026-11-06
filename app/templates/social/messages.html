@@ -1,0 +1,101 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Messages{% endblock %}
+{% macro room_name(r) -%}
+{%- if r.kind == "group" -%}{{ r.name }}{%- else -%}{%- for m in r.members if m.user_id != user.id -%}{{ m.user.public_name }}{%- else -%}Conversation{%- endfor -%}{%- endif -%}
+{%- endmacro %}
+{% block content %}
+{% call ui.page_header("Messages", "Live chat with friends and groups across batches.", "fa-comment-dots") %}
+  <a class="btn btn-ghost" href="/friends"><i class="fa-solid fa-user-group me-2"></i>Friends</a>
+  <button class="btn btn-primary" type="button" data-modal-open="#group-modal"><i class="fa-solid fa-users me-2"></i>New group</button>
+{% endcall %}
+<div class="cn-grid" style="grid-template-columns: minmax(240px, 320px) minmax(0, 1fr)" data-social data-me="{{ user.id }}" data-room="{{ active.id if active else 0 }}">
+  <div class="cn-card flush" style="max-height: calc(100vh - 190px); overflow-y: auto">
+    <ul class="cn-list px-2">
+      {% for r in rooms %}
+      <li class="{{ 'bg-body-tertiary rounded-3' if active and r.id == active.id }}" style="padding: 10px">
+        <span class="cn-avatar" style="--size: 38px">{% if r.kind == "group" %}<i class="fa-solid fa-users"></i>{% else %}{{ room_name(r)|initials }}{% endif %}</span>
+        <a class="flex-grow-1 min-w-0 text-reset" href="/messages/{{ r.id }}"><div class="fw-bold text-truncate">{{ room_name(r) }}</div>
+          <div class="small text-muted">{{ "Group · " ~ r.members|length ~ " members" if r.kind == "group" else ("Online" if (r.members|rejectattr("user_id", "equalto", user.id)|map(attribute="user_id")|select("in", online)|list) else "Direct message") }}</div></a>
+        <span class="cn-badge danger" data-room-badge="{{ r.id }}" {{ 'hidden' if not unread.get(r.id) }}>{{ unread.get(r.id, 0) }}</span>
+      </li>
+      {% else %}<li class="text-muted small p-3">No conversations yet. Message a friend or start a group.</li>{% endfor %}
+    </ul>
+    {% if friends %}<div class="px-3 pb-3"><div class="small-caps mb-2">Start a chat</div>
+      {% for f in friends[:12] %}<form method="post" action="/messages/direct/{{ f.id }}" class="d-inline">{{ csrf_field() }}<button class="cn-chip border-0 mb-1" type="submit">{{ f.full_name.split()[0] }}</button></form>{% endfor %}</div>{% endif %}
+  </div>
+  {% if active %}
+  <div class="cn-card flush cn-chat">
+    <div class="cn-card-head p-3 mb-0 border-bottom">
+      {% set partner = (active.members|rejectattr("user_id", "equalto", user.id)|first) if active.kind != "group" else None %}
+      <div class="min-w-0"><h3 class="text-truncate">{{ room_name(active) }}{% if partner %} {{ ui.account_badge(partner.user) }}{% endif %}</h3><div class="small text-muted" data-typing></div></div>
+      {% if active.kind == "group" %}
+      <div class="cn-dropdown"><button class="btn btn-ghost btn-sm" type="button" data-dropdown-toggle><i class="fa-solid fa-ellipsis"></i></button>
+        <div class="cn-menu">
+          <div class="cn-menu-head small">{% for m in active.members %}<div>{{ m.user.public_name }}{% if m.role == "owner" %} · owner{% endif %} {{ ui.account_badge(m.user) }}</div>{% endfor %}</div>
+          {% set mine = active.members|selectattr("user_id", "equalto", user.id)|first %}
+          {% if mine and mine.role == "owner" %}<button class="cn-menu-item" type="button" data-modal-open="#add-modal"><i class="fa-solid fa-user-plus"></i>Add members</button>{% endif %}
+          <form method="post" action="/groups/{{ active.id }}/leave" data-confirm="Leave this group?">{{ csrf_field() }}<button class="cn-menu-item" type="submit"><i class="fa-solid fa-right-from-bracket"></i>Leave group</button></form>
+        </div></div>
+      {% else %}
+      {% set other = active.members|rejectattr("user_id", "equalto", user.id)|first %}
+      {% if other %}<div class="cn-dropdown"><button class="btn btn-ghost btn-sm" type="button" data-dropdown-toggle><i class="fa-solid fa-ellipsis"></i></button>
+        <div class="cn-menu">
+          <form method="post" action="/friends/unfriend/{{ other.user_id }}" data-confirm="Unfriend {{ other.user.full_name }}?">{{ csrf_field() }}<button class="cn-menu-item" type="submit"><i class="fa-solid fa-user-minus"></i>Unfriend</button></form>
+          <form method="post" action="/friends/block/{{ other.user_id }}" data-confirm="Block {{ other.user.full_name }}?">{{ csrf_field() }}<button class="cn-menu-item" type="submit"><i class="fa-solid fa-ban"></i>Block</button></form>
+          <button class="cn-menu-item" type="button" data-modal-open="#report-modal" data-action="/report/user/{{ other.user_id }}"><i class="fa-solid fa-flag"></i>Report</button>
+        </div></div>{% endif %}
+      {% endif %}
+    </div>
+    <script type="application/json" id="social-initial">{{ page_json(history) }}</script>
+    <div class="cn-chat-log" data-log></div>
+    {% if can_send %}
+    <form class="cn-chat-input" data-send data-ajax><textarea class="form-control" rows="1" placeholder="Message… (Enter to send)" maxlength="2000" aria-label="Message"></textarea>
+      <button class="btn btn-primary" type="submit" aria-label="Send"><i class="fa-solid fa-paper-plane"></i></button></form>
+    {% else %}<div class="p-3 text-muted small border-top"><i class="fa-solid fa-lock me-1"></i>{{ reason }}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="cn-card">{{ ui.empty("fa-comment-dots", "Pick a conversation", "Choose a chat on the left, or start one with a friend.") }}</div>
+  {% endif %}
+</div>
+{% call ui.modal("group-modal", "Create a group", "lg") %}
+<form method="post" action="/groups">
+  {{ csrf_field() }}
+  <div class="cn-modal-body">
+    {{ ui.field("name", "Group name", required=True, placeholder="e.g. Physics study circle") }}
+    {{ ui.field("description", "Description (optional)") }}
+    <label class="form-label">Members — friends and teachers from any batch</label>
+    <div style="max-height: 40vh; overflow-y: auto">
+      {% if friends %}<div class="small-caps mt-2">Friends</div>{% for f in friends %}<label class="d-flex gap-2 align-items-center py-1"><input class="form-check-input" type="checkbox" name="member_ids" value="{{ f.id }}">{{ f.full_name }} <span class="small text-muted">{{ f.role_label }}</span></label>{% endfor %}{% endif %}
+      {% if teachers %}<div class="small-caps mt-2">Teachers</div>{% for t in teachers if t.id not in friends|map(attribute="id")|list %}<label class="d-flex gap-2 align-items-center py-1"><input class="form-check-input" type="checkbox" name="member_ids" value="{{ t.id }}">{{ t.full_name }} <span class="small text-muted">{{ t.role_label }}</span></label>{% endfor %}{% endif %}
+    </div>
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create group</button></div>
+</form>
+{% endcall %}
+{% if active and active.kind == "group" %}
+{% call ui.modal("add-modal", "Add members") %}
+<form method="post" action="/groups/{{ active.id }}/members">
+  {{ csrf_field() }}
+  {% set current = active.members|map(attribute="user_id")|list %}
+  <div class="cn-modal-body" style="max-height: 50vh; overflow-y: auto">
+    {% for f in friends + teachers if f.id not in current %}<label class="d-flex gap-2 align-items-center py-1"><input class="form-check-input" type="checkbox" name="member_ids" value="{{ f.id }}">{{ f.full_name }} <span class="small text-muted">{{ f.role_label }}</span></label>
+    {% else %}<p class="text-muted small mb-0">Everyone you can add is already here.</p>{% endfor %}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Add</button></div>
+</form>
+{% endcall %}
+{% endif %}
+{% call ui.modal("report-modal", "Report a person") %}
+<form method="post" action="#">
+  {{ csrf_field() }}
+  <div class="cn-modal-body">
+    <p class="small text-muted">Sent confidentially to the administration with recent messages as evidence.</p>
+    {{ ui.select("category", "What happened?", [("harassment", "Harassment"), ("bullying", "Bullying"), ("complaint", "General complaint"), ("misconduct", "Misconduct"), ("safety", "Safety concern"), ("other", "Other")]) }}
+    {{ ui.textarea("reason", "Details", rows=4, required=True) }}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-danger" type="submit">Send report</button></div>
+</form>
+{% endcall %}
+{% endblock %}
+{% block scripts %}<script src="{{ asset('js/social.js') }}" defer></script>{% endblock %}

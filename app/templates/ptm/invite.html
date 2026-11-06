@@ -1,0 +1,33 @@
+{% extends "layouts/public.html" %}
+{% block title %}{{ ptm.title }}{% endblock %}
+{% block content %}
+<section class="cn-section"><div class="container" style="max-width: 720px">
+  <div class="cn-card">
+    <span class="cn-eyebrow"><i class="fa-solid fa-people-roof"></i>Invitation</span>
+    <h1 class="h2 mt-3">{{ ptm.title }}</h1>
+    <p class="text-muted">Dear {{ invite.invitee_name }}{% if invite.regarding %}, regarding <strong>{{ invite.regarding }}</strong>{% endif %} — you are cordially invited.</p>
+    <div class="cn-form-grid small mb-3">
+      <div><div class="small-caps">When</div>{{ ptm.scheduled_at|dt('%A, %d %B %Y at %I:%M %p') }}</div>
+      <div><div class="small-caps">Duration</div>{{ ptm.duration_minutes }} minutes</div>
+      <div><div class="small-caps">Mode</div>{{ {"online": "Online (video room)", "in_person": "In person", "hybrid": "In person or online"}[ptm.mode] }}</div>
+      <div><div class="small-caps">Venue</div>{{ ptm.location or "—" }}</div>
+    </div>
+    {% if ptm.agenda %}<div class="small-caps">Agenda</div><div class="mb-3">{{ ptm.agenda|nl2p }}</div>{% endif %}
+    {% if ptm.status == "cancelled" %}
+    <div class="cn-callout danger"><i class="fa-solid fa-ban"></i><div>This meeting has been cancelled. We apologise for the inconvenience.</div></div>
+    {% else %}
+    <div class="cn-callout info"><i class="fa-solid fa-reply"></i><div>Your response: <strong>{{ {"pending": "Not answered yet", "yes": "Attending", "no": "Not attending", "maybe": "Maybe"}[invite.rsvp] }}</strong></div></div>
+    <form method="post" action="/ptm/invite/{{ invite.token }}/rsvp" class="d-flex flex-wrap gap-2" data-allow-resubmit>
+      {{ csrf_field() }}
+      <button class="btn btn-primary" name="answer" value="yes" type="submit"><i class="fa-solid fa-check me-2"></i>I'll attend</button>
+      <button class="btn btn-ghost" name="answer" value="maybe" type="submit">Maybe</button>
+      <button class="btn btn-soft-danger" name="answer" value="no" type="submit">Can't attend</button>
+    </form>
+    {% if ptm.meeting and ptm.meeting.status in ("scheduled", "live") %}
+    <a class="btn btn-soft w-100 mt-3" href="/ptm/join/{{ invite.token }}"><i class="fa-solid fa-video me-2"></i>Join the online meeting</a>
+    <p class="small text-muted mt-2 mb-0">Use Chrome or Edge on a phone or laptop. Camera and microphone are optional.</p>
+    {% endif %}
+    {% endif %}
+  </div>
+</div></section>
+{% endblock %}

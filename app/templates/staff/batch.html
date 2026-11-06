@@ -1,0 +1,24 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ batch.name }}{% endblock %}
+{% block content %}
+{% call ui.page_header(batch.name, batch.class_level ~ " · " ~ batch.subject ~ " · " ~ batch.days_label ~ " " ~ batch.time_label, "fa-layer-group") %}
+  <a class="btn btn-ghost" href="/chat/{{ batch.id }}"><i class="fa-solid fa-comments me-2"></i>Batch chat</a>
+{% endcall %}
+<div class="cn-grid" style="grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr)">
+  <div class="cn-card flush"><div class="cn-card-head"><h3>Students ({{ students|length }})</h3></div>
+    <div class="cn-table-wrap mt-2"><table class="cn-table"><thead><tr><th>Student</th><th>Attendance</th><th>Avg score</th><th>Health & needs</th></tr></thead><tbody>
+      {% for s in students %}{% set a = att.get(s.id) %}{% set sc = scores.get(s.id) %}<tr>
+        <td>{{ ui.person(s, s.id_code) }}</td>
+        <td>{% if a and a[1] %}{% set pct = (a[0] * 100 / a[1])|round|int %}<div class="small fw-semibold">{{ pct }}%</div><div class="cn-meter {{ 'danger' if pct < 60 else '' }}" style="width: 90px"><span style="width: {{ pct }}%"></span></div>{% else %}<span class="text-muted small">—</span>{% endif %}</td>
+        <td>{% if sc is not none %}<div class="small fw-semibold">{{ sc|round|int }}%</div><div class="cn-meter {{ 'danger' if sc < 40 else '' }}" style="width: 90px"><span style="width: {{ sc|round|int }}%"></span></div>{% else %}<span class="text-muted small">—</span>{% endif %}</td>
+        <td class="small">{% if s.special_needs %}<div><span class="cn-badge info"><i class="fa-solid fa-hand-holding-heart"></i>Special needs</span></div>{% if s.special_needs_notes %}<div class="text-muted">{{ s.special_needs_notes }}</div>{% endif %}{% endif %}
+          {% for h in s.health_records %}<div><i class="fa-solid fa-notes-medical text-warning me-1"></i><strong>{{ h.condition }}</strong>{% if h.medication %} · {{ h.medication }}{% endif %}{% if h.emergency_contact %} · ☎ {{ h.emergency_contact }}{% endif %}</div>{% endfor %}</td>
+      </tr>{% endfor %}</tbody></table></div></div>
+  <div class="cn-card"><div class="cn-card-head"><h3>Classes</h3></div>
+    <ul class="cn-list">{% for l in lessons %}<li><div class="flex-grow-1 min-w-0"><div class="fw-bold">{{ l.title }}</div><div class="small text-muted">{{ l.date|d('%a %d %b') }} · {{ l.start_time|t }}</div></div>
+      {% if l.video %}<a class="btn btn-soft btn-sm" href="/videos/{{ l.video_id }}#comments"><i class="fa-solid fa-play me-1"></i>Watch & comments</a>{% elif l.meeting and l.meeting.status == "ended" %}<span class="cn-badge neutral">Held</span>
+      {% elif l.status == "scheduled" %}<form method="post" action="/staff/lessons/{{ l.id }}/start">{{ csrf_field() }}<button class="btn btn-primary btn-sm" type="submit">Start</button></form>{% endif %}</li>
+      {% else %}<li class="text-muted small">No recent classes.</li>{% endfor %}</ul></div>
+</div>
+{% endblock %}

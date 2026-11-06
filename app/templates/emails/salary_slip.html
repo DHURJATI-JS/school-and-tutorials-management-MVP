@@ -1,0 +1,8 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<p>Dear {{ name }},</p>
+<p>Your <strong>{{ title|lower }}</strong> for <strong>{{ period }}</strong> of <strong>{{ amount }}</strong> has been {{ "credited via Cashfree" if online else "paid" }}.{% if reference %} Reference: {{ reference }}.{% endif %}</p>
+<p>The salary slip{{ " and receipt" if not online }} are available in your staff portal under <em>Salary slips</em>.</p>
+<p style="margin:20px 0;"><a href="{{ settings.BASE_URL }}/staff/salary" style="background:#4f46e5;color:#fff;padding:11px 18px;border-radius:10px;text-decoration:none;font-weight:700;">View salary slips</a></p>
+<p>Thank you for your work!<br><strong>{{ site.site_name }}</strong></p>
+{% endblock %}

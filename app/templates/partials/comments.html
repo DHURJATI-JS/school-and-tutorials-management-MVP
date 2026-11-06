@@ -1,0 +1,20 @@
+{# Comments + replies under a video. Context: comment_video, comments, comment_count, comment_version, can_moderate #}
+{% import "partials/macros.html" as ui %}
+<section class="cn-card cn-comments mt-3" id="comments" data-comments data-video="{{ comment_video.id }}" data-version="{{ comment_version }}">
+  <div class="cn-card-head"><h3><i class="fa-regular fa-comments me-2 text-muted"></i>Comments <span class="cn-badge neutral ms-1" data-comment-count>{{ comment_count }}</span></h3>
+    <span class="small text-muted d-none d-sm-inline">Seen by this batch and its teachers</span></div>
+  <form class="cn-comment-form" method="post" action="/videos/{{ comment_video.id }}/comments" data-comment-form data-ajax>
+    {{ csrf_field() }}<input type="hidden" name="video_seconds" value="">
+    <div class="d-flex gap-2 align-items-start">
+      {{ ui.avatar(user.user or user, 36) }}
+      <div class="flex-grow-1 min-w-0">
+        <textarea class="form-control" name="body" rows="2" maxlength="1000" required placeholder="Ask a question or share a tip about this video…" aria-label="Your comment"></textarea>
+        <div class="d-flex justify-content-between align-items-center mt-2 gap-2 flex-wrap">
+          <label class="small text-muted d-flex align-items-center gap-2 mb-0" data-at-time-wrap hidden><input class="form-check-input m-0" type="checkbox" data-at-time>Pin to the current moment of the video</label>
+          <button class="btn btn-primary btn-sm ms-auto" type="submit"><i class="fa-solid fa-paper-plane me-1"></i>Comment</button>
+        </div>
+      </div>
+    </div>
+  </form>
+  <div class="cn-comment-list" data-comment-list>{% include "partials/comment_list.html" %}</div>
+</section>

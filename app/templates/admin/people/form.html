@@ -1,0 +1,109 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% set is_student = role == "student" %}
+{% set m = member %}
+{% macro v(name) -%}{{ values.get(name) if values.get(name) is not none else (member[name] if member and member[name] is not none else '') }}{%- endmacro %}
+{% block title %}{{ ("Edit " ~ m.full_name) if m else ("Register " ~ ("student" if is_student else "staff member")) }}{% endblock %}
+{% block content %}
+{% call ui.page_header(("Edit " ~ m.full_name) if m else ("Register a new " ~ ("student" if is_student else "staff member")),
+  "Photo, date of birth, contact details and an ID proof are mandatory. Login details and a virtual ID card are emailed automatically." if not m else "Update the profile. Changing the name, photo or batches regenerates the ID card.",
+  "fa-user-pen" if m else "fa-user-plus") %}
+  <a class="btn btn-ghost" href="{{ ('/admin/members/' ~ m.id) if m else ('/admin/students' if is_student else '/admin/staff') }}"><i class="fa-solid fa-arrow-left me-2"></i>Back</a>
+{% endcall %}
+<form method="post" action="{{ ('/admin/members/' ~ m.id ~ '/edit') if m else '/admin/members/new' }}" enctype="multipart/form-data">
+  {{ csrf_field() }}<input type="hidden" name="role" value="{{ role }}">
+  <div class="cn-grid" style="grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr)">
+    <div>
+      <fieldset class="cn-fieldset"><legend><i class="fa-solid fa-user me-2"></i>Personal details</legend>
+        <div class="cn-form-grid">
+          {{ ui.field("full_name", "Full name", value=v("full_name"), required=True, cls="span-2") }}
+          {{ ui.field("dob", "Date of birth", type="date", value=v("dob"), required=True) }}
+          {{ ui.select("gender", "Gender", C.GENDERS, selected=v("gender"), empty_label="Select…") }}
+          {{ ui.field("email", "Email", type="email", value=v("email"), required=True, help="Login details and the ID card are sent here") }}
+          {{ ui.field("phone", "Mobile number", value=v("phone"), required=True, placeholder="+91 98765 43210", help="Used for OTP sign-in") }}
+          {{ ui.textarea("address", "Address", value=v("address"), rows=2, cls="span-2") }}
+        </div>
+      </fieldset>
+      {% if is_student %}
+      <fieldset class="cn-fieldset"><legend><i class="fa-solid fa-school me-2"></i>Academic</legend>
+        <div class="cn-form-grid">
+          {{ ui.select("class_level", "Class", C.CLASS_LEVELS, selected=v("class_level"), required=True, empty_label="Select class…") }}
+          {{ ui.field("school_name", "School (if different)", value=v("school_name")) }}
+          <div class="cn-field span-2"><label class="form-label">Batches</label>
+            <div class="d-flex flex-wrap gap-2">
+              {% for b in batches if b.is_active %}
+              <label class="cn-chip" style="cursor:pointer"><input class="form-check-input me-1" type="checkbox" name="batch_ids" value="{{ b.id }}" {{ 'checked' if b.id in enrolled }}>
+                <span class="cn-color-dot" style="background:{{ b.color }}"></span>{{ b.name }} · {{ b.days_label }} {{ b.time_label }}</label>
+              {% else %}<span class="small text-muted">No active batches yet — <a href="/admin/batches/new">create one</a>.</span>{% endfor %}
+            </div>
+            <div class="form-text">Overlapping batches and more than {{ settings.MAX_DAILY_HOURS|num }} hours a day are blocked automatically.</div></div>
+        </div>
+      </fieldset>
+      <fieldset class="cn-fieldset"><legend><i class="fa-solid fa-people-roof me-2"></i>Parent / guardian</legend>
+        <div class="cn-form-grid">
+          {{ ui.field("parent_name", "Name", value=v("parent_name"), required=True) }}
+          {{ ui.select("parent_relation", "Relation", C.PARENT_RELATIONS, selected=v("parent_relation"), empty_label="Select…") }}
+          {{ ui.field("parent_phone", "Phone", value=v("parent_phone"), required=True) }}
+          {{ ui.field("parent_email", "Email", type="email", value=v("parent_email"), help="Receives the thank-you note, PTM invites and progress updates") }}
+        </div>
+      </fieldset>
+      <fieldset class="cn-fieldset"><legend><i class="fa-solid fa-hand-holding-heart me-2"></i>Health & inclusion</legend>
+        {{ ui.check("special_needs", "This student has special needs / a disability", checked=(values.get("special_needs") or (m.special_needs if m else False)), help="The AI becomes extra gentle and lenient in all messages, feedback and alerts (except formal warnings).") }}
+        {{ ui.textarea("special_needs_notes", "Notes for teachers", value=v("special_needs_notes"), rows=2) }}
+        {% if not m %}
+        <div class="cn-form-grid">
+          {{ ui.field("health_condition", "Health condition (optional)", value=values.get("health_condition", ""), placeholder="e.g. Asthma") }}
+          {{ ui.select("health_severity", "Severity", [("low", "Low"), ("medium", "Medium"), ("high", "High")], selected=values.get("health_severity", "low")) }}
+          {{ ui.field("health_medication", "Medication", value=values.get("health_medication", "")) }}
+          {{ ui.field("health_notes", "Notes", value=values.get("health_notes", "")) }}
+        </div>{% else %}<p class="small text-muted mb-3">Manage health records from the profile page.</p>{% endif %}
+      </fieldset>
+      {% else %}
+      <fieldset class="cn-fieldset"><legend><i class="fa-solid fa-briefcase me-2"></i>Employment</legend>
+        <div class="cn-form-grid">
+          {{ ui.select("staff_role", "Role", C.STAFF_ROLES.items(), selected=v("staff_role"), required=True, empty_label="Select role…") }}
+          {{ ui.field("designation", "Designation", value=v("designation"), placeholder="e.g. Senior Maths Teacher") }}
+          {{ ui.field("qualification", "Qualification", value=v("qualification")) }}
+          {{ ui.field("monthly_salary", "Monthly salary (₹)", type="number", value=v("monthly_salary"), attrs='step="0.01" min="0"') }}
+          {{ ui.field("joining_date", "Joining date", type="date", value=v("joining_date")) }}
+        </div>
+      </fieldset>
+      <fieldset class="cn-fieldset"><legend><i class="fa-solid fa-building-columns me-2"></i>Payout details (for Cashfree payouts)</legend>
+        <div class="cn-form-grid">
+          {{ ui.field("bank_account_name", "Account holder name", value=v("bank_account_name")) }}
+          {{ ui.field("bank_account_number", "Account number", value=v("bank_account_number"), attrs='inputmode="numeric" autocomplete="off"') }}
+          {{ ui.field("bank_ifsc", "IFSC", value=v("bank_ifsc"), placeholder="HDFC0001234") }}
+          {{ ui.field("upi_id", "UPI ID", value=v("upi_id"), placeholder="name@okbank") }}
+        </div>
+      </fieldset>
+      {% endif %}
+    </div>
+    <div>
+      <div class="cn-card mb-3">
+        <h3 class="h6">Photo {% if not m %}<span class="text-danger">*</span>{% endif %}</h3>
+        <div class="d-flex gap-3 align-items-center mb-2">
+          <img id="photo-preview" class="cn-photo-preview" alt="Photo preview" {% if m %}src="/files/photo/{{ m.id }}"{% else %}hidden{% endif %}>
+          <div class="d-grid gap-2 flex-grow-1">
+            <label class="btn btn-ghost mb-0"><i class="fa-solid fa-upload me-2"></i>Upload<input class="d-none" type="file" id="photo" name="photo" accept="image/png,image/jpeg,image/webp" data-preview="#photo-preview"></label>
+            <button class="btn btn-soft" type="button" data-camera-for="#photo"><i class="fa-solid fa-camera me-2"></i>Take photo</button>
+          </div>
+        </div>
+        <div class="form-text">Used on the virtual ID card. Metadata is stripped automatically.</div>
+      </div>
+      <div class="cn-card mb-3">
+        <h3 class="h6">ID proof {% if not m %}<span class="text-danger">*</span>{% endif %}</h3>
+        {{ ui.select("id_proof_type", "Document type", C.ID_PROOF_TYPES, selected=v("id_proof_type"), required=True, empty_label="Select…") }}
+        {{ ui.field("id_proof_number", "Document number", value=v("id_proof_number"), required=True) }}
+        <div class="cn-upload"><input class="form-control" type="file" name="id_proof" accept="image/png,image/jpeg,image/webp,application/pdf">
+          <div class="form-text mt-2">Image or PDF{% if m %} — leave empty to keep the current file{% endif %}.</div></div>
+      </div>
+      <div class="cn-card">
+        <h3 class="h6">Login</h3>
+        {{ ui.field("username", "Username", value=v("username"), placeholder="auto-generated if empty", help="Lowercase letters, numbers, dots") }}
+        {% if not m %}{{ ui.field("password", "Password", type="text", value="", placeholder="auto-generated if empty", help="A strong password is generated and emailed (marked confidential). Stored only as a bcrypt hash.", attrs='autocomplete="new-password"') }}{% endif %}
+        <button class="btn btn-primary w-100 mt-2" type="submit" data-loading="Saving…"><i class="fa-solid fa-floppy-disk me-2"></i>{{ "Save changes" if m else "Register & send ID card" }}</button>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Batch chats{% endblock %}
+{% block content %}
+{% call ui.page_header("Batch chats", "Real-time group chat for each batch. Abusive language is filtered automatically.", "fa-comments") %}{% endcall %}
+{% if batches %}<div class="cn-grid auto">{% for b in batches %}
+  <a class="cn-card d-block" href="/chat/{{ b.id }}" style="color:inherit; border-top: 4px solid {{ b.color }}"><h3 class="h6 mb-1">{{ b.name }}</h3><div class="small text-muted">{{ b.class_level }} · {{ b.subject }}</div></a>
+{% endfor %}</div>{% else %}<div class="cn-card">{{ ui.empty("fa-comments", "No batch chats", "Batch chats appear when you're part of a batch.") }}</div>{% endif %}
+{% endblock %}

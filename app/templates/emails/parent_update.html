@@ -1,0 +1,5 @@
+{% extends "emails/base.html" %}
+{% block content %}
+{% for para in message.split("\n\n") %}<p>{{ para|replace("\n", " ") }}</p>{% endfor %}
+<p style="font-size:13px;color:#64748b;">You can reply to this email or WhatsApp us at {{ site.contact_whatsapp }} to talk to the teacher.</p>
+{% endblock %}

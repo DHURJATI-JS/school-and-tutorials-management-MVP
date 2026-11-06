@@ -1,0 +1,44 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Video library{% endblock %}
+{% block content %}
+{% call ui.page_header("Video library", "Pre-recorded lessons and automatic class recordings. Notes are indexed for the AI doubt solver.", "fa-film") %}
+  <form method="get"><select class="form-select" name="batch" data-autosubmit aria-label="Batch"><option value="0">All batches</option>{% for b in batches %}<option value="{{ b.id }}" {{ 'selected' if b.id == batch }}>{{ b.name }}</option>{% endfor %}</select></form>
+  <button class="btn btn-primary" type="button" data-modal-open="#upload-modal"><i class="fa-solid fa-upload me-2"></i>Upload video</button>
+{% endcall %}
+{% if videos %}
+<div class="cn-grid auto">
+  {% for v in videos %}
+  <div class="cn-card">
+    <div class="cn-player mb-3" style="aspect-ratio:16/9">{% if v.file_path %}<video preload="none" controls src="/files/video/{{ v.id }}" style="height:100%"></video>{% elif v.external_url %}<video preload="none" controls src="{{ v.external_url }}" style="height:100%"></video>{% endif %}</div>
+    <div class="d-flex justify-content-between gap-2"><div class="min-w-0"><div class="fw-bold text-truncate">{{ v.title }}</div>
+      <div class="small text-muted">{{ v.batch.name }} · {{ v.duration_seconds|duration }} · {{ v.size_bytes|filesize }}</div></div>
+      <span class="cn-badge {{ 'info' if v.source == 'recording' else 'primary' }}">{{ "Recording" if v.source == "recording" else "Upload" }}</span></div>
+    <div class="d-flex justify-content-between align-items-center mt-1 gap-2">
+      <div class="small text-muted">Used in {{ usage.get(v.id, 0) }} class(es)</div>
+      <a class="btn btn-ghost btn-sm" href="/videos/{{ v.id }}#comments"><i class="fa-regular fa-comments me-1"></i>{{ comments.get(v.id, 0) }} comment{{ "" if comments.get(v.id, 0) == 1 else "s" }}</a></div>
+    <form method="post" action="/admin/videos/{{ v.id }}/notes" class="mt-2">{{ csrf_field() }}
+      <textarea class="form-control form-control-sm" name="notes" rows="2" placeholder="Notes / summary for the AI…">{{ v.notes or "" }}</textarea>
+      <div class="d-flex justify-content-between mt-2"><button class="btn btn-soft btn-sm" type="submit">Save notes</button></div></form>
+    <form method="post" action="/admin/videos/{{ v.id }}/delete" data-confirm="Delete this video?" class="mt-2">{{ csrf_field() }}<button class="btn btn-soft-danger btn-sm" type="submit"><i class="fa-solid fa-trash-can me-1"></i>Delete</button></form>
+  </div>
+  {% endfor %}
+</div>
+{% else %}<div class="cn-card">{{ ui.empty("fa-film", "No videos yet", "Upload a pre-recorded lesson — then a live meeting isn't required for classes that use it.") }}</div>{% endif %}
+{% call ui.modal("upload-modal", "Upload a video", "lg") %}
+<form method="post" action="/admin/videos/upload" enctype="multipart/form-data">
+  {{ csrf_field() }}
+  <div class="cn-modal-body cn-form-grid">
+    <div class="cn-field"><label class="form-label">Batch <span class="text-danger">*</span></label><select class="form-select" name="batch_id" required><option value="">Select…</option>{% for b in batches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select></div>
+    {{ ui.field("title", "Title", required=True) }}
+    <div class="cn-field span-2"><label class="form-label">Video file (MP4 / WebM, up to {{ settings.MAX_VIDEO_MB }} MB)</label>
+      <input class="form-control" type="file" name="file" accept="video/mp4,video/webm,video/quicktime" data-duration-into="#up-duration"></div>
+    {{ ui.field("external_url", "…or a direct https:// link", cls="span-2") }}
+    {{ ui.textarea("description", "Description", rows=2, cls="span-2") }}
+    {{ ui.textarea("notes", "Lesson notes for the AI doubt solver", rows=3, cls="span-2") }}
+    <input type="hidden" name="duration_seconds" id="up-duration">
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit" data-loading="Uploading…">Upload</button></div>
+</form>
+{% endcall %}
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Salary slips{% endblock %}
+{% block content %}
+{% call ui.page_header("Salary slips", "Your salary payments, receipts and printable slips.", "fa-file-invoice") %}{% endcall %}
+<div class="cn-card flush">
+  {% if payments %}<div class="cn-table-wrap"><table class="cn-table"><thead><tr><th>Month</th><th>Description</th><th class="num">Amount</th><th>Status</th><th></th></tr></thead><tbody>
+    {% for p in payments %}<tr><td class="fw-semibold">{{ p.period }}</td><td>{{ p.title }}<div class="small text-muted">{{ p.method or "" }}{% if p.paid_on %} · {{ p.paid_on|d }}{% endif %}</div></td>
+      <td class="num fw-bold">{{ p.amount|money }}</td><td>{{ ui.status(p.status) }}</td>
+      <td><div class="cn-actions">{% if p.receipt_path %}<a class="btn btn-ghost btn-sm" href="/files/salary/{{ p.id }}" target="_blank" rel="noopener"><i class="fa-solid fa-file-arrow-down me-1"></i>Receipt</a>{% endif %}
+        {% if p.status == "paid" %}<a class="btn btn-soft btn-sm" href="/staff/salary/{{ p.id }}/slip" target="_blank" rel="noopener">Slip</a>{% endif %}</div></td></tr>{% endfor %}
+  </tbody></table></div>{% else %}{{ ui.empty("fa-file-invoice", "No salary slips yet", "They appear here as soon as the office records a payment.") }}{% endif %}
+</div>
+{% endblock %}

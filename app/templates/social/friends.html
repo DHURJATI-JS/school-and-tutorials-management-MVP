@@ -1,0 +1,67 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Friends{% endblock %}
+{% macro actions(u, rel) %}
+<div class="cn-actions">
+  {% if rel and rel.status == "accepted" %}
+    {% if u.status == "active" %}<form method="post" action="/messages/direct/{{ u.id }}">{{ csrf_field() }}<button class="btn btn-primary btn-sm" type="submit"><i class="fa-solid fa-comment-dots me-1"></i>Message</button></form>{% endif %}
+    <div class="cn-dropdown"><button class="btn btn-ghost btn-sm" type="button" data-dropdown-toggle aria-label="More"><i class="fa-solid fa-ellipsis"></i></button>
+      <div class="cn-menu">
+        <form method="post" action="/friends/unfriend/{{ u.id }}" data-confirm="Remove {{ u.full_name }} from your friends?">{{ csrf_field() }}<button class="cn-menu-item" type="submit"><i class="fa-solid fa-user-minus"></i>Unfriend</button></form>
+        <form method="post" action="/friends/block/{{ u.id }}" data-confirm="Block {{ u.full_name }}? They won't be able to message you or send requests.">{{ csrf_field() }}<button class="cn-menu-item" type="submit"><i class="fa-solid fa-ban"></i>Block</button></form>
+        <button class="cn-menu-item" type="button" data-modal-open="#report-modal" data-action="/report/user/{{ u.id }}"><i class="fa-solid fa-flag"></i>Report</button>
+      </div></div>
+  {% elif rel and rel.status == "pending" %}<span class="cn-badge warning">Request pending</span>
+  {% elif not rel %}
+    <form method="post" action="/friends/request/{{ u.id }}">{{ csrf_field() }}<button class="btn btn-soft btn-sm" type="submit"><i class="fa-solid fa-user-plus me-1"></i>Add friend</button></form>
+    <form method="post" action="/friends/block/{{ u.id }}" data-confirm="Block {{ u.full_name }}?">{{ csrf_field() }}<button class="btn btn-ghost btn-sm" type="submit" title="Block"><i class="fa-solid fa-ban"></i></button></form>
+  {% endif %}
+</div>
+{% endmacro %}
+{% block content %}
+{% call ui.page_header("Friends", "Connect with classmates and teachers across batches, then chat or create groups.", "fa-user-group") %}
+  <a class="btn btn-primary" href="/messages"><i class="fa-solid fa-comment-dots me-2"></i>Messages</a>
+{% endcall %}
+<form class="cn-card mb-3 d-flex gap-2" method="get" action="/friends#find">
+  <input class="form-control" name="q" value="{{ q }}" placeholder="Find people by name or ID (e.g. STU-000012)" aria-label="Search people">
+  <button class="btn btn-primary" type="submit" data-allow-resubmit><i class="fa-solid fa-magnifying-glass me-2"></i>Search</button>
+</form>
+<div class="cn-tabset">
+  <div class="cn-tabs mb-3" data-tabs data-default="{{ 'find' if q else 'friends' }}">
+    <button type="button" data-tab="friends">Friends ({{ accepted|length }})</button>
+    <button type="button" data-tab="requests">Requests{% if incoming %} <span class="cn-badge danger ms-1">{{ incoming|length }}</span>{% endif %}</button>
+    <button type="button" data-tab="find">Find people</button>
+    <button type="button" data-tab="blocked">Blocked ({{ blocked|length }})</button>
+  </div>
+  <div class="cn-tab-panel" id="friends"><div class="cn-card">
+    {% if accepted %}<ul class="cn-list">{% for rel, u in accepted %}<li>{{ ui.person(u, u.role_label, photo=False) }}<div class="ms-auto">{{ actions(u, rel) }}</div></li>{% endfor %}</ul>
+    {% else %}{{ ui.empty("fa-user-group", "No friends yet", "Search for classmates or teachers and send a friend request.") }}{% endif %}</div></div>
+  <div class="cn-tab-panel" id="requests"><div class="cn-card">
+    <h3 class="h6">Received</h3>
+    <ul class="cn-list mb-3">{% for rel, u in incoming %}<li>{{ ui.person(u, u.role_label, photo=False) }}<div class="cn-actions ms-auto">
+      <form method="post" action="/friends/{{ rel.id }}/accept">{{ csrf_field() }}<button class="btn btn-primary btn-sm" type="submit">Accept</button></form>
+      <form method="post" action="/friends/{{ rel.id }}/decline">{{ csrf_field() }}<button class="btn btn-ghost btn-sm" type="submit">Decline</button></form>
+      <form method="post" action="/friends/block/{{ u.id }}" data-confirm="Block {{ u.full_name }}?">{{ csrf_field() }}<button class="btn btn-ghost btn-sm" type="submit" title="Block"><i class="fa-solid fa-ban"></i></button></form></div></li>
+      {% else %}<li class="text-muted small">No pending requests.</li>{% endfor %}</ul>
+    <h3 class="h6">Sent</h3>
+    <ul class="cn-list">{% for rel, u in outgoing %}<li>{{ ui.person(u, u.role_label, photo=False) }}<div class="ms-auto"><form method="post" action="/friends/{{ rel.id }}/decline">{{ csrf_field() }}<button class="btn btn-ghost btn-sm" type="submit">Cancel request</button></form></div></li>
+      {% else %}<li class="text-muted small">No sent requests.</li>{% endfor %}</ul></div></div>
+  <div class="cn-tab-panel" id="find"><div class="cn-card">
+    {% if results %}<ul class="cn-list">{% for u in results %}<li>{{ ui.person(u, u.role_label ~ " · " ~ u.id_code, photo=False) }}<div class="ms-auto">{{ actions(u, status_of.get(u.id)) }}</div></li>{% endfor %}</ul>
+    {% elif q %}{{ ui.empty("fa-magnifying-glass", "Nobody found", "Try another name or ID number.") }}{% else %}<p class="text-muted small mb-0">Search above to find classmates and teachers.</p>{% endif %}</div></div>
+  <div class="cn-tab-panel" id="blocked"><div class="cn-card">
+    <ul class="cn-list">{% for rel, u in blocked %}<li>{{ ui.person(u, u.role_label, photo=False) }}<div class="ms-auto"><form method="post" action="/friends/unblock/{{ u.id }}">{{ csrf_field() }}<button class="btn btn-soft btn-sm" type="submit">Unblock</button></form></div></li>
+      {% else %}<li class="text-muted small">You haven't blocked anyone.</li>{% endfor %}</ul></div></div>
+</div>
+{% call ui.modal("report-modal", "Report a person") %}
+<form method="post" action="#">
+  {{ csrf_field() }}
+  <div class="cn-modal-body">
+    <p class="small text-muted">Your report goes confidentially to the administration with your recent messages from this person.</p>
+    {{ ui.select("category", "What happened?", [("harassment", "Harassment"), ("bullying", "Bullying"), ("complaint", "General complaint"), ("misconduct", "Misconduct"), ("safety", "Safety concern"), ("other", "Other")]) }}
+    {{ ui.textarea("reason", "Details", rows=4, required=True) }}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-danger" type="submit">Send report</button></div>
+</form>
+{% endcall %}
+{% endblock %}

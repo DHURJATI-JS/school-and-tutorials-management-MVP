@@ -1,0 +1,34 @@
+{% import "partials/macros.html" as ui %}
+{% set viewer = me if me is defined else user %}
+{% macro one(c, reply=False) -%}
+{% set size = 30 if reply else 36 %}
+<article class="cn-comment{{ ' reply' if reply }}" id="c{{ c.id }}">
+  {% if c.deleted or (c.user and c.user.status == "deleted") %}
+  <span class="cn-avatar" style="--size: {{ size }}px"><i class="fa-regular fa-user"></i></span>
+  <div class="cn-comment-body"><div class="cn-comment-gone">{{ "This comment was deleted." if c.deleted else "Comment from a deleted account." }}</div></div>
+  {% else %}
+  {# photos are private (files.photo): admins, the person themself, and staff for their students - initials otherwise #}
+  {% set photo_ok = viewer.kind == "admin" or c.user_id == viewer.id or (viewer.kind == "staff" and c.author_kind == "student") %}
+  {% if c.user %}{{ ui.avatar(c.user, size, photo_ok) }}{% else %}<span class="cn-avatar" style="--size: {{ size }}px">{{ c.author_name|initials }}</span>{% endif %}
+  <div class="cn-comment-body">
+    <div class="cn-comment-head"><span class="fw-bold">{{ c.author_name }}</span>
+      {% if c.author_kind == "admin" %}<span class="cn-badge primary">Admin</span>{% elif c.author_kind == "staff" %}<span class="cn-badge info">Teacher</span>{% endif %}
+      {{ ui.account_badge(c.user) }}<span class="small text-muted">{{ c.created_at|timeago }}</span></div>
+    <div class="cn-comment-text">{% if c.timestamp_label %}<button class="cn-time-chip" type="button" data-seek="{{ c.video_seconds }}" title="Play from {{ c.timestamp_label }}"><i class="fa-solid fa-play"></i>{{ c.timestamp_label }}</button>{% endif %}{{ c.body }}</div>
+    <div class="cn-comment-actions">
+      <button class="btn btn-link btn-sm p-0" type="button" data-reply="{{ c.parent_id or c.id }}" data-reply-name="{{ c.author_name }}"><i class="fa-solid fa-reply me-1"></i>Reply</button>
+      {% if can_moderate or (viewer.kind == "admin" and c.author_kind == "admin") or (c.user_id and c.user_id == viewer.id) %}
+      <button class="btn btn-link btn-sm p-0 text-danger" type="button" data-delete="{{ c.id }}"><i class="fa-solid fa-trash-can me-1"></i>Delete</button>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</article>
+{%- endmacro %}
+{% for t in comments %}
+<div class="cn-thread" data-thread="{{ t.c.id }}">
+  {{ one(t.c) }}
+  {% if t.replies %}<div class="cn-replies">{% for r in t.replies %}{{ one(r, True) }}{% endfor %}</div>{% endif %}
+</div>
+{% else %}
+<p class="text-muted small mb-0 cn-thread">No comments yet — ask a question or share a tip about this video.</p>
+{% endfor %}

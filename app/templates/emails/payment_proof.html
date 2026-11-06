@@ -1,0 +1,12 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1 style="margin:0 0 10px;font-size:20px;">Payment proof waiting for verification</h1>
+<p><strong>{{ student }}</strong> uploaded a payment screenshot.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;">
+  <tr><td style="padding:3px 14px 3px 0;color:#64748b;">Fee</td><td>{{ fee_title }} · {{ period }}</td></tr>
+  <tr><td style="padding:3px 14px 3px 0;color:#64748b;">Amount</td><td><strong>{{ amount }}</strong></td></tr>
+  <tr><td style="padding:3px 14px 3px 0;color:#64748b;">Method</td><td>{{ method }}</td></tr>
+  <tr><td style="padding:3px 14px 3px 0;color:#64748b;">UTR / reference</td><td>{{ reference }}</td></tr>
+</table>
+<p style="margin:20px 0;"><a href="{{ link }}" style="background:#4f46e5;color:#fff;padding:11px 18px;border-radius:10px;text-decoration:none;font-weight:700;">Verify or reject</a></p>
+{% endblock %}

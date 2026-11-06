@@ -1,0 +1,210 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ member.full_name }}{% endblock %}
+{% block content %}
+{% set m = member %}
+<div class="cn-page-head">
+  <div>{{ ui.avatar(m, 64) }}<div><h1>{{ m.full_name }}</h1><p>{{ m.role_label }} · <span class="tabular">{{ m.id_code }}</span> · @{{ m.username }}</p></div></div>
+  <div class="cn-page-actions">
+    {{ ui.status(m.status) }}
+    <a class="btn btn-ghost" href="/admin/members/{{ m.id }}/edit"><i class="fa-solid fa-pen me-2"></i>Edit</a>
+    <div class="cn-dropdown"><button class="btn btn-ghost" type="button" data-dropdown-toggle><i class="fa-solid fa-ellipsis"></i></button>
+      <div class="cn-menu">
+        <form method="post" action="/admin/members/{{ m.id }}/resend-card">{{ csrf_field() }}<button class="cn-menu-item" type="submit"><i class="fa-solid fa-id-card"></i>Regenerate & email ID card</button></form>
+        <form method="post" action="/admin/members/{{ m.id }}/reset-password" data-confirm="Generate a new password and email it to {{ m.email }}?" data-confirm-tone="primary">{{ csrf_field() }}<button class="cn-menu-item" type="submit"><i class="fa-solid fa-key"></i>Reset password</button></form>
+        <a href="/files/idproof/{{ m.id }}" target="_blank" rel="noopener"><i class="fa-solid fa-file-shield"></i>View ID proof</a>
+        <a href="https://wa.me/{{ m.phone|replace('+', '')|replace(' ', '')|replace('-', '') }}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i>WhatsApp</a>
+      </div></div>
+    {% if m.status == "active" %}
+    <button class="btn btn-soft-danger" type="button" data-modal-open="#remove-modal"><i class="fa-solid fa-user-slash me-2"></i>Remove</button>
+    {% elif m.status == "removed" %}
+    <button class="btn btn-soft-success" type="button" data-modal-open="#reinstate-modal"><i class="fa-solid fa-user-check me-2"></i>Reinstate</button>
+    {% elif m.status == "banned" %}
+    <button class="btn btn-soft-success" type="button" data-modal-open="#unban-modal"><i class="fa-solid fa-unlock me-2"></i>Unban</button>
+    {% elif m.status == "deleted" %}
+    <button class="btn btn-soft-success" type="button" data-modal-open="#restore-modal"><i class="fa-solid fa-trash-arrow-up me-2"></i>Restore</button>
+    {% endif %}
+    {% if m.status in ("active", "removed") %}
+    <button class="btn btn-danger" type="button" data-modal-open="#ban-modal"><i class="fa-solid fa-ban me-2"></i>Ban</button>
+    {% endif %}
+    {% if m.status != "deleted" %}
+    <button class="btn btn-ghost text-danger" type="button" data-modal-open="#delete-modal" title="Delete the account"><i class="fa-solid fa-trash-can"></i></button>
+    {% endif %}
+  </div>
+</div>
+{% if m.status == "removed" %}<div class="cn-callout danger"><i class="fa-solid fa-user-slash"></i><div><strong>Removed {{ m.status_changed_at|timeago }}.</strong> Reason: {{ m.status_reason }}</div></div>
+{% elif m.status == "banned" %}<div class="cn-callout danger"><i class="fa-solid fa-ban"></i><div><strong>Banned {{ m.status_changed_at|timeago }}.</strong> Reason: {{ m.status_reason }}<div class="small mt-1">They can't sign in — the sign-in page tells them they are banned and to contact {{ site.contact_email }}. Their data is kept and they show as <em>Banned</em> to others.</div></div></div>
+{% elif m.status == "deleted" %}<div class="cn-callout danger"><i class="fa-solid fa-trash-can"></i><div><strong>Deleted {{ m.status_changed_at|timeago }} — dormant until {{ m.purge_on|d('%d %b %Y') }}.</strong> {% if m.status_reason %}Reason: {{ m.status_reason }}{% endif %}<div class="small mt-1">Hidden from everyone and shown as “Deleted user”. On {{ m.purge_on|d('%d %b %Y') }} the account, its files and its data are removed for good. Restore it before then to bring everything back.</div></div></div>{% endif %}
+{% if strikes %}<div class="cn-callout warning"><i class="fa-solid fa-comment-slash"></i><div>{{ strikes }} moderation strike(s) for abusive language. <a href="/admin/security">See details</a></div></div>{% endif %}
+
+<div class="cn-grid" style="grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr)">
+  <div>
+    <div class="cn-card">
+      <div class="cn-card-head"><h3>Profile</h3></div>
+      <div class="cn-form-grid small">
+        <div class="cn-field"><div class="small-caps">Email</div><a href="mailto:{{ m.email }}">{{ m.email }}</a></div>
+        <div class="cn-field"><div class="small-caps">Phone</div>{{ m.phone }}</div>
+        <div class="cn-field"><div class="small-caps">Date of birth</div>{{ m.dob|d }} ({{ m.age }} yrs)</div>
+        <div class="cn-field"><div class="small-caps">Gender</div>{{ m.gender or "—" }}</div>
+        <div class="cn-field"><div class="small-caps">ID proof</div>{{ m.id_proof_type }} · {{ m.id_proof_number }}</div>
+        <div class="cn-field"><div class="small-caps">Last sign-in</div>{{ m.last_login_at|timeago if m.last_login_at else "Never" }}</div>
+        <div class="cn-field span-2"><div class="small-caps">Address</div>{{ m.address or "—" }}</div>
+        {% if m.is_student %}
+        <div class="cn-field"><div class="small-caps">Parent / guardian</div>{{ m.parent_name }} {% if m.parent_relation %}({{ m.parent_relation }}){% endif %}</div>
+        <div class="cn-field"><div class="small-caps">Parent contact</div>{{ m.parent_phone }}{% if m.parent_email %}<br><a href="mailto:{{ m.parent_email }}">{{ m.parent_email }}</a>{% endif %}</div>
+        <div class="cn-field span-2"><div class="small-caps">Batches</div>{% for e in m.enrollments %}<a class="cn-chip me-1" href="/admin/batches/{{ e.batch.id }}"><span class="cn-color-dot" style="background:{{ e.batch.color }}"></span>{{ e.batch.name }}</a>{% else %}—{% endfor %}</div>
+        {% else %}
+        <div class="cn-field"><div class="small-caps">Designation</div>{{ m.designation or m.role_label }}</div>
+        <div class="cn-field"><div class="small-caps">Monthly salary</div>{{ m.monthly_salary|money if m.monthly_salary is not none else "—" }}</div>
+        <div class="cn-field"><div class="small-caps">Joined</div>{{ m.joining_date|d }}</div>
+        <div class="cn-field"><div class="small-caps">Payout account</div>{% if m.bank_account_number %}•••• {{ m.bank_account_number[-4:] }} · {{ m.bank_ifsc }}{% elif m.upi_id %}{{ m.upi_id }}{% else %}Not set{% endif %}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if m.is_student %}
+    <div class="cn-card">
+      <div class="cn-card-head"><h3>Academic snapshot</h3></div>
+      {% set present = attendance.get("present", 0) %}{% set total = present + attendance.get("absent", 0) %}
+      <div class="cn-grid cols-2 mb-3">
+        {{ ui.stat("Attendance", ((present * 100 / total)|round|int ~ "%") if total else "—", "fa-user-check", "success", hint=present ~ " of " ~ total ~ " classes") }}
+        {{ ui.stat("Tests taken", attempts|length, "fa-file-pen", "info") }}
+      </div>
+      {% if attempts %}<div class="cn-table-wrap"><table class="cn-table"><thead><tr><th>Test</th><th class="num">Score</th><th>Status</th></tr></thead><tbody>
+        {% for a in attempts %}<tr><td>{{ a.test.title }}</td><td class="num">{{ a.score|num if a.score is not none else "—" }} / {{ a.max_score|num if a.max_score is not none else "—" }}</td><td>{{ ui.status(a.status) }}</td></tr>{% endfor %}
+      </tbody></table></div>{% endif %}
+      {% for a in alerts %}<div class="cn-callout {{ 'danger' if a.level == 'warning' else 'warning' if a.level == 'concern' else 'success' }} mt-3 mb-0">{{ ui.level(a.level) }}<div class="small">{{ a.message }}</div></div>{% endfor %}
+    </div>
+    <div class="cn-card">
+      <div class="cn-card-head"><h3>Fees</h3><a class="btn btn-ghost btn-sm" href="/admin/fees?q={{ m.id_code }}">Manage</a></div>
+      {% if fees %}<div class="cn-table-wrap"><table class="cn-table"><thead><tr><th>Month</th><th>Title</th><th class="num">Amount</th><th>Status</th></tr></thead><tbody>
+        {% for f in fees %}<tr><td>{{ f.period }}</td><td>{{ f.title }}</td><td class="num">{{ f.amount|money }}</td><td>{{ ui.status(f.status) }}</td></tr>{% endfor %}
+      </tbody></table></div>{% else %}<p class="text-muted small mb-0">No fee records yet.</p>{% endif %}
+    </div>
+    {% else %}
+    <div class="cn-card">
+      <div class="cn-card-head"><h3>Batches taught</h3></div>
+      {% for b in taught %}<a class="cn-chip me-1 mb-1" href="/admin/batches/{{ b.id }}"><span class="cn-color-dot" style="background:{{ b.color }}"></span>{{ b.name }}</a>{% else %}<p class="text-muted small mb-0">Not assigned to any batch.</p>{% endfor %}
+    </div>
+    <div class="cn-card">
+      <div class="cn-card-head"><h3>Salary payments</h3><a class="btn btn-ghost btn-sm" href="/admin/salaries">Manage</a></div>
+      {% if salaries %}<div class="cn-table-wrap"><table class="cn-table"><thead><tr><th>Month</th><th class="num">Amount</th><th>Status</th><th></th></tr></thead><tbody>
+        {% for p in salaries %}<tr><td>{{ p.period }}</td><td class="num">{{ p.amount|money }}</td><td>{{ ui.status(p.status) }}</td>
+          <td>{% if p.receipt_path %}<a href="/files/salary/{{ p.id }}" target="_blank" rel="noopener">Receipt</a>{% endif %}</td></tr>{% endfor %}
+      </tbody></table></div>{% else %}<p class="text-muted small mb-0">No salary records yet.</p>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="cn-card">
+      <div class="cn-card-head"><h3>Virtual ID card</h3><a class="btn btn-ghost btn-sm" href="/files/idcard/{{ m.id }}?download=1"><i class="fa-solid fa-download"></i></a></div>
+      {% if m.idcard_path %}<div class="cn-idcard"><img src="/files/idcard/{{ m.id }}" alt="ID card of {{ m.full_name }}"></div>
+      {% else %}<p class="text-muted small">No card yet.</p>{% endif %}
+    </div>
+    {% if m.is_student %}
+    <div class="cn-card" id="health">
+      <div class="cn-card-head"><h3><i class="fa-solid fa-notes-medical me-2 text-muted"></i>Health & special needs</h3>
+        <button class="btn btn-soft btn-sm" type="button" data-modal-open="#health-modal"><i class="fa-solid fa-plus me-1"></i>Add</button></div>
+      {% if m.special_needs %}<div class="cn-callout info"><i class="fa-solid fa-hand-holding-heart"></i><div class="small"><strong>Special needs.</strong> {{ m.special_needs_notes or "" }} The AI uses a gentle, lenient tone for this student.</div></div>{% endif %}
+      {% for h in m.health_records %}
+      <div class="d-flex gap-2 align-items-start py-2 border-bottom">
+        <span class="cn-badge {{ 'danger' if h.severity == 'high' else 'warning' if h.severity == 'medium' else 'neutral' }}">{{ h.severity|capitalize }}</span>
+        <div class="flex-grow-1 small"><div class="fw-bold">{{ h.condition }}</div>{% if h.medication %}<div>Medication: {{ h.medication }}</div>{% endif %}
+          {% if h.notes %}<div class="text-muted">{{ h.notes }}</div>{% endif %}{% if h.emergency_contact %}<div>Emergency: {{ h.emergency_contact }}</div>{% endif %}</div>
+        <form method="post" action="/admin/health/{{ h.id }}/delete" data-confirm="Remove this health record?">{{ csrf_field() }}<button class="btn btn-ghost btn-sm" type="submit"><i class="fa-solid fa-xmark"></i></button></form>
+      </div>
+      {% else %}<p class="text-muted small mb-0">No health issues recorded.</p>{% endfor %}
+    </div>
+    {% endif %}
+    <div class="cn-card">
+      <div class="cn-card-head"><h3>History</h3></div>
+      {% for r in removals %}<div class="small py-2 border-bottom"><span class="cn-badge {{ 'danger' if r.action in ('removed', 'banned', 'deleted') else 'success' }}">{{ r.action|capitalize }}</span>
+        by {{ r.actor }} · {{ r.created_at|dt }}<div class="text-muted mt-1">{{ r.reason }}</div></div>
+      {% else %}<p class="text-muted small mb-0">Registered {{ m.created_at|dt }} by {{ m.created_by or "admin" }}.</p>{% endfor %}
+    </div>
+  </div>
+</div>
+
+{% call ui.modal("remove-modal", "Remove " ~ m.full_name, "lg") %}
+<form method="post" action="/admin/members/{{ m.id }}/remove">
+  {{ csrf_field() }}
+  <div class="cn-modal-body">
+    <div class="cn-callout warning"><i class="fa-solid fa-triangle-exclamation"></i><div class="small">Removing blocks sign-in immediately and disconnects any live class or chat. A reason is mandatory.</div></div>
+    <script type="application/json" id="removal-data">{{ page_json(removal_fill) }}</script>
+    <div class="cn-form-grid">
+      <div class="cn-field"><label class="form-label">Template</label>
+        <select class="form-select" name="template_key" data-fill="#removal-data">
+          {% for key, t in templates.items() %}<option value="{{ key }}">{{ t.label }}</option>{% endfor %}</select></div>
+      <div class="cn-field"><label class="form-label">Email subject</label><input class="form-control" name="email_subject" value="Notice regarding your access to {{ site.site_name }}"></div>
+    </div>
+    {{ ui.textarea("reason", "Reason (mandatory)", value=removal_fill["spamming"].reason, rows=2, required=True, attrs='data-fill-key="reason"') }}
+    {{ ui.textarea("email_body", "Email to " ~ m.full_name ~ (" (parent in CC)" if m.is_student and m.parent_email else ""), value=removal_fill["spamming"].email_body, rows=9, attrs='data-fill-key="email_body"', help="Edit freely. Pick “Custom” to write your own; {reason} is replaced with the reason above.") }}
+    {{ ui.check("notify", "Send this email (via SMTP)", checked=True) }}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+    <button class="btn btn-danger" type="submit"><i class="fa-solid fa-user-slash me-2"></i>Remove & notify</button></div>
+</form>
+{% endcall %}
+{% call ui.modal("reinstate-modal", "Reinstate " ~ m.full_name) %}
+<form method="post" action="/admin/members/{{ m.id }}/reinstate">
+  {{ csrf_field() }}
+  <div class="cn-modal-body">{{ ui.textarea("reason", "Note", rows=2, placeholder="e.g. Fees cleared", id="reinstate-reason") }}{{ ui.check("notify", "Email them that access is restored", checked=True, id="reinstate-notify") }}</div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Reinstate</button></div>
+</form>
+{% endcall %}
+{% call ui.modal("ban-modal", "Ban " ~ m.full_name) %}
+<form method="post" action="/admin/members/{{ m.id }}/ban">
+  {{ csrf_field() }}
+  <div class="cn-modal-body">
+    <div class="cn-callout danger"><i class="fa-solid fa-ban"></i><div class="small">Takes effect <strong>at once</strong>: they are signed out everywhere, live classes and chats close, and the sign-in page tells them they are banned and to contact <strong>{{ site.contact_email }}</strong>. Nothing is deleted — they show as <em>Banned</em>.</div></div>
+    {{ ui.textarea("reason", "Reason (shown to them)", rows=2, required=True, placeholder="e.g. Repeated bullying in the batch chat", id="ban-reason") }}
+    {{ ui.check("block_ip", "Also block their network address" ~ (" (" ~ m.last_ip ~ ")" if m.last_ip else ""), help="Blocks every device on that network — including a shared school or home Wi-Fi.", id="ban-block-ip") }}
+    {{ ui.check("notify", "Email them the reason", checked=True, id="ban-notify") }}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+    <button class="btn btn-danger" type="submit"><i class="fa-solid fa-ban me-2"></i>Ban now</button></div>
+</form>
+{% endcall %}
+{% call ui.modal("unban-modal", "Unban " ~ m.full_name) %}
+<form method="post" action="/admin/members/{{ m.id }}/unban">
+  {{ csrf_field() }}
+  <div class="cn-modal-body">{{ ui.textarea("reason", "Note", rows=2, placeholder="e.g. Apology accepted", id="unban-reason") }}
+    <p class="small text-muted">Network blocks linked to this person are lifted too.</p>{{ ui.check("notify", "Email them that access is restored", checked=True, id="unban-notify") }}</div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Unban</button></div>
+</form>
+{% endcall %}
+{% call ui.modal("delete-modal", "Delete " ~ m.full_name ~ "'s account") %}
+<form method="post" action="/admin/members/{{ m.id }}/delete">
+  {{ csrf_field() }}
+  <div class="cn-modal-body">
+    <div class="cn-callout warning"><i class="fa-solid fa-hourglass-half"></i><div class="small">The account goes <strong>dormant for {{ settings.DELETED_RETENTION_DAYS }} days</strong>: no sign-in, hidden from everyone, shown as “Deleted user”. You can restore it until then. After that the account, its files, fees, attendance, messages and comments are <strong>removed for good</strong> automatically.</div></div>
+    {{ ui.textarea("reason", "Reason", rows=2, required=True, placeholder="e.g. Left the institute — parent asked to delete the data", id="delete-reason") }}
+    {{ ui.check("notify", "Email them (with the date it becomes permanent)", checked=True, id="delete-notify") }}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button>
+    <button class="btn btn-danger" type="submit"><i class="fa-solid fa-trash-can me-2"></i>Delete account</button></div>
+</form>
+{% endcall %}
+{% call ui.modal("restore-modal", "Restore " ~ m.full_name ~ "'s account") %}
+<form method="post" action="/admin/members/{{ m.id }}/restore">
+  {{ csrf_field() }}
+  <div class="cn-modal-body"><p class="small">Everything comes back as it was — profile, batches, fees, messages and comments.</p>
+    {{ ui.textarea("reason", "Note", rows=2, id="restore-reason") }}{{ ui.check("notify", "Email them that the account is restored", checked=True, id="restore-notify") }}</div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Restore</button></div>
+</form>
+{% endcall %}
+{% call ui.modal("health-modal", "Add health record") %}
+<form method="post" action="/admin/members/{{ m.id }}/health">
+  {{ csrf_field() }}
+  <div class="cn-modal-body cn-form-grid">
+    {{ ui.field("condition", "Condition", required=True, cls="span-2", placeholder="e.g. Asthma, ADHD, food allergy") }}
+    {{ ui.select("severity", "Severity", [("low", "Low"), ("medium", "Medium"), ("high", "High")]) }}
+    {{ ui.field("medication", "Medication") }}
+    {{ ui.field("emergency_contact", "Emergency contact", cls="span-2") }}
+    {{ ui.textarea("notes", "Notes for teachers", rows=2, cls="span-2") }}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save</button></div>
+</form>
+{% endcall %}
+{% endblock %}

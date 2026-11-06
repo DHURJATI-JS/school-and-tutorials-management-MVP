@@ -1,0 +1,25 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ task.title }}{% endblock %}
+{% block content %}
+{% call ui.page_header(task.title, C.TASK_KINDS.get(task.kind, task.kind) ~ " · " ~ task.batch.name ~ " · " ~ task.assign_date|d('%d %b') ~ " → " ~ task.due_date|d('%d %b %Y'), "fa-list-check") %}
+  {% if task.attachment_path %}<a class="btn btn-ghost" href="/files/task/{{ task.id }}" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip me-2"></i>Attachment</a>{% endif %}
+  <a class="btn btn-ghost" href="/admin/tasks"><i class="fa-solid fa-arrow-left me-2"></i>Back</a>
+{% endcall %}
+{% if task.description %}<div class="cn-card mb-3"><div class="cn-rich">{{ task.description|nl2p }}</div></div>{% endif %}
+<div class="cn-card flush">
+  <div class="cn-card-head"><h3>Submissions ({{ subs|length }} / {{ students|length }})</h3></div>
+  <div class="cn-table-wrap mt-2"><table class="cn-table">
+    <thead><tr><th>Student</th><th>Status</th><th>Submitted</th><th>Answer</th><th>Grade</th></tr></thead>
+    <tbody>{% for s in students %}{% set sub = subs.get(s.id) %}
+      <tr><td>{{ ui.person(s, s.id_code) }}</td>
+        <td>{% if sub %}{{ ui.status(sub.status) }}{% if sub.is_late %} <span class="cn-badge danger">Late</span>{% endif %}{% else %}{{ ui.status("pending", "Not submitted") }}{% endif %}</td>
+        <td class="small">{{ sub.submitted_at|dt if sub else "—" }}</td>
+        <td class="small" style="max-width: 320px">{% if sub %}{{ (sub.text or "")[:220] }}{% if sub.file_path %}<div><a href="/files/submission/{{ sub.id }}" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip me-1"></i>File</a></div>{% endif %}{% endif %}</td>
+        <td>{% if sub %}<form method="post" action="/admin/tasks/{{ task.id }}/grade/{{ sub.id }}" class="d-flex gap-2 align-items-center">{{ csrf_field() }}
+          <input class="form-control form-control-sm" style="width: 80px" name="marks" type="number" step="0.5" min="0" value="{{ sub.marks|num if sub.marks is not none else '' }}" placeholder="{{ task.max_marks|num if task.max_marks else 'marks' }}">
+          <input class="form-control form-control-sm" name="feedback" value="{{ sub.feedback or '' }}" placeholder="Feedback">
+          <button class="btn btn-soft btn-sm" type="submit">Save</button></form>{% endif %}</td></tr>
+    {% endfor %}</tbody></table></div>
+</div>
+{% endblock %}

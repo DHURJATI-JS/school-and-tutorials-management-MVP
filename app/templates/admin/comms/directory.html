@@ -1,0 +1,34 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Directory{% endblock %}
+{% block content %}
+{% call ui.page_header("Contact directory", "Reach students, parents and staff in one click — email, phone or WhatsApp.", "fa-address-book") %}{% endcall %}
+<form class="cn-card mb-3 d-flex flex-wrap gap-2 align-items-end" method="get">
+  <div class="cn-tabs" style="align-self:center">{% for v, l in [("students", "Students & parents"), ("staff", "Staff")] %}<a class="btn btn-sm {{ 'btn-primary' if who == v else 'btn-ghost' }}" href="?who={{ v }}">{{ l }}</a>{% endfor %}</div>
+  <input type="hidden" name="who" value="{{ who }}">
+  <div class="flex-grow-1" style="min-width:200px"><input class="form-control" name="q" value="{{ q }}" placeholder="Search name or ID"></div>
+  {% if who != "staff" %}<select class="form-select" style="width:auto" name="batch" data-autosubmit><option value="0">All batches</option>{% for b in batches %}<option value="{{ b.id }}" {{ 'selected' if b.id == batch }}>{{ b.name }}</option>{% endfor %}</select>{% endif %}
+  <button class="btn btn-ghost" type="submit" data-allow-resubmit><i class="fa-solid fa-magnifying-glass"></i></button>
+</form>
+{% macro wa(phone, text) -%}https://wa.me/{{ (phone or '')|replace('+', '')|replace(' ', '')|replace('-', '') }}?text={{ text|urlencode }}{%- endmacro %}
+<div class="cn-grid auto">
+  {% for p in people %}
+  <div class="cn-card">
+    {{ ui.person(p, p.role_label) }}
+    <div class="d-flex flex-wrap gap-2 mt-3">
+      <a class="btn btn-soft btn-sm" href="mailto:{{ p.email }}"><i class="fa-solid fa-envelope me-1"></i>Email</a>
+      <a class="btn btn-ghost btn-sm" href="tel:{{ p.phone }}"><i class="fa-solid fa-phone me-1"></i>Call</a>
+      <a class="btn btn-soft-success btn-sm" href="{{ wa(p.phone, 'Hello ' ~ p.full_name.split()[0] ~ ', this is ' ~ site.site_name ~ '.') }}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp me-1"></i>WhatsApp</a>
+    </div>
+    {% if p.is_student and p.parent_name %}
+    <div class="border-top mt-3 pt-3 small"><div class="small-caps mb-1">Parent / guardian</div><div class="fw-semibold">{{ p.parent_name }}</div>
+      <div class="d-flex flex-wrap gap-2 mt-2">
+        {% if p.parent_email %}<a class="btn btn-soft btn-sm" href="mailto:{{ p.parent_email }}"><i class="fa-solid fa-envelope me-1"></i>Email</a>{% endif %}
+        {% if p.parent_phone %}<a class="btn btn-ghost btn-sm" href="tel:{{ p.parent_phone }}"><i class="fa-solid fa-phone me-1"></i>Call</a>
+        <a class="btn btn-soft-success btn-sm" href="{{ wa(p.parent_phone, 'Namaste ' ~ p.parent_name ~ ', this is ' ~ site.site_name ~ ' regarding ' ~ p.full_name.split()[0] ~ '.') }}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp me-1"></i>WhatsApp</a>{% endif %}
+      </div></div>
+    {% endif %}
+  </div>
+  {% else %}<div class="cn-card">{{ ui.empty("fa-address-book", "Nobody found") }}</div>{% endfor %}
+</div>
+{% endblock %}

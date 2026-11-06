@@ -1,0 +1,4 @@
+{% extends "emails/base.html" %}
+{% block content %}
+{% for para in body.split("\n\n") %}<p>{{ para|replace("\n", " ") }}</p>{% endfor %}
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Profile & ID card{% endblock %}
+{% block content %}
+{% set m = member %}
+{% call ui.page_header("Profile & ID card", "Contact the office to change your details or password.", "fa-id-card") %}
+  <a class="btn btn-primary" href="/files/idcard/{{ m.id }}?download=1"><i class="fa-solid fa-download me-2"></i>Download ID card</a>
+{% endcall %}
+<div class="cn-grid" style="grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)">
+  <div class="cn-card">
+    <div class="cn-idcard mb-3">{% if m.idcard_path %}<img src="/files/idcard/{{ m.id }}" alt="Your ID card">{% endif %}</div>
+    <div class="cn-callout info mb-0"><i class="fa-solid fa-id-card"></i><div class="small">Sign in quickly by scanning this card on the sign-in page — we'll confirm with a one-time code on your email and phone. Never share your password.</div></div>
+  </div>
+  <div class="cn-card">
+    <div class="d-flex gap-3 align-items-center mb-3">{{ ui.avatar(m, 64) }}<div><div class="h5 mb-0">{{ m.full_name }}</div><div class="text-muted small">{{ m.role_label }} · {{ m.id_code }}</div></div></div>
+    <div class="cn-form-grid small">
+      <div class="cn-field"><div class="small-caps">Username</div>{{ m.username }}</div>
+      <div class="cn-field"><div class="small-caps">Date of birth</div>{{ m.dob|d }}</div>
+      <div class="cn-field"><div class="small-caps">Email</div>{{ m.email }}</div>
+      <div class="cn-field"><div class="small-caps">Phone</div>{{ m.phone }}</div>
+      {% if m.is_student %}
+      <div class="cn-field span-2"><div class="small-caps">Batches</div>{% for e in m.enrollments %}<span class="cn-chip me-1"><span class="cn-color-dot" style="background:{{ e.batch.color }}"></span>{{ e.batch.name }}</span>{% else %}—{% endfor %}</div>
+      <div class="cn-field"><div class="small-caps">Parent / guardian</div>{{ m.parent_name }}</div>
+      <div class="cn-field"><div class="small-caps">Parent phone</div>{{ m.parent_phone }}</div>
+      {% else %}
+      <div class="cn-field"><div class="small-caps">Designation</div>{{ m.designation or m.role_label }}</div>
+      <div class="cn-field"><div class="small-caps">Joined</div>{{ m.joining_date|d }}</div>
+      {% endif %}
+    </div>
+    {% if m.health_records %}<h3 class="h6 mt-2">Health information on file</h3>
+      {% for h in m.health_records %}<div class="small py-1"><i class="fa-solid fa-notes-medical text-warning me-1"></i>{{ h.condition }}{% if h.medication %} · {{ h.medication }}{% endif %}</div>{% endfor %}{% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ test.title }}{% endblock %}
+{% block content %}
+{% call ui.page_header(test.title, test.batch.name ~ " · " ~ test.class_level ~ " · " ~ test.subject ~ " · " ~ test.topic, "fa-file-pen") %}
+  {{ ui.status(test.status) }}
+  {% if test.status == "published" %}<a class="btn btn-soft" href="/admin/tests/{{ test.id }}/results"><i class="fa-solid fa-square-poll-vertical me-2"></i>Results</a>{% endif %}
+  <form method="post" action="/admin/tests/{{ test.id }}/delete" data-confirm="Delete this test{{ ' and its results' if attempts }}?">{{ csrf_field() }}<button class="btn btn-soft-danger" type="submit"><i class="fa-solid fa-trash-can"></i></button></form>
+{% endcall %}
+
+{% if test.status == "generating" %}
+<div class="cn-card text-center py-5" data-test-generating="/admin/tests/{{ test.id }}/status">
+  <div class="cn-empty-icon mx-auto mb-3"><span class="cn-spin" style="width:28px;height:28px;border-width:3px;display:inline-block;border-style:solid;border-color:currentColor;border-right-color:transparent;border-radius:50%;animation:cn-rot .8s linear infinite"></span></div>
+  <h3>The AI is writing your questions…</h3>
+  <p class="text-muted mb-0">Using {{ test.class_level }} · {{ test.subject }} and your knowledge base. This page refreshes automatically.</p>
+</div>
+{% else %}
+{% if test.generation_note %}<div class="cn-callout {{ 'success' if test.ai_generated else 'warning' }}"><i class="fa-solid {{ 'fa-wand-magic-sparkles' if test.ai_generated else 'fa-plug-circle-exclamation' }}"></i><div class="small">{{ test.generation_note }}</div></div>{% endif %}
+{% if attempts %}<div class="cn-callout info"><i class="fa-solid fa-lock"></i><div class="small">{{ attempts }} student(s) have started this test, so questions are locked to keep grading fair.</div></div>{% endif %}
+<script type="application/json" id="test-questions">{{ page_json(questions) }}</script>
+<script type="application/json" id="test-kinds">{{ page_json(kinds) }}</script>
+<div class="cn-grid" style="grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr)" data-test-editor data-save-url="/admin/tests/{{ test.id }}/save" data-locked="{{ '1' if attempts else '0' }}">
+  <div>
+    <div class="d-flex justify-content-between align-items-center mb-3"><span class="fw-bold" data-total-marks></span>
+      {% if not attempts %}<button class="btn btn-soft btn-sm" type="button" data-add-question><i class="fa-solid fa-plus me-1"></i>Add question</button>{% endif %}</div>
+    <div data-questions></div>
+  </div>
+  <div>
+    <div class="cn-card" data-test-meta style="position: sticky; top: 84px">
+      <h3 class="h6">Test settings</h3>
+      {{ ui.field("title", "Title", value=test.title) }}
+      {{ ui.textarea("instructions", "Instructions for students", value=test.instructions, rows=3) }}
+      {{ ui.field("duration_minutes", "Time limit (minutes)", type="number", value=test.duration_minutes, attrs='min="5" max="240"') }}
+      {{ ui.check("show_results", "Show answers & explanations after grading", checked=test.show_results) }}
+      {% if not attempts %}<button class="btn btn-primary w-100" type="button" data-save-test><i class="fa-solid fa-floppy-disk me-2"></i>Save changes</button>{% endif %}
+    </div>
+    {% if test.status != "published" %}
+    <form class="cn-card mt-3" method="post" action="/admin/tests/{{ test.id }}/publish" id="publish" data-confirm="Publish this test to {{ test.batch.name }}? Questions lock once a student starts." data-confirm-tone="primary" data-confirm-ok="Publish">
+      {{ csrf_field() }}
+      <h3 class="h6">Publish to {{ test.batch.name }}</h3>
+      <p class="small text-muted">Students see it on their calendar between these dates. Holidays can't be used; vacations need “holiday homework”. Save your edits first.</p>
+      {{ ui.field("assign_date", "Opens on", type="date", value=today().isoformat(), required=True, attrs="data-dayinfo") }}
+      {{ ui.field("due_date", "Deadline", type="date", required=True, attrs="data-dayinfo") }}
+      {{ ui.check("is_holiday_homework", "Holiday homework") }}
+      {{ ui.check("notify_email", "Email students", checked=True) }}
+      <button class="btn btn-primary w-100" type="submit" data-loading="Publishing…"><i class="fa-solid fa-paper-plane me-2"></i>Publish test</button>
+    </form>
+    {% elif task %}
+    <div class="cn-card mt-3"><h3 class="h6">Published</h3><p class="small mb-0">Open {{ task.assign_date|d('%d %b') }} → due {{ task.due_date|d('%d %b %Y') }}{% if task.is_holiday_homework %} · holiday homework{% endif %}.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{{ asset('js/test.js') }}" defer></script>{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}AI insights{% endblock %}
+{% block content %}
+{% call ui.page_header("AI insights for your batches", "Early warnings about scores, attendance and missed work — with suggested next steps.", "fa-wand-magic-sparkles") %}{% endcall %}
+{% if alerts %}<div class="cn-grid">{% for a in alerts %}
+  <div class="cn-card" style="{{ 'opacity:.6' if a.resolved }}"><div class="d-flex flex-wrap gap-3 align-items-start">{{ ui.avatar(a.user, 42) }}
+    <div class="flex-grow-1 min-w-0"><div class="d-flex flex-wrap gap-2 align-items-center">{{ ui.level(a.level) }}<strong>{{ a.title }}</strong>{% if a.user.special_needs %}<span class="cn-badge info"><i class="fa-solid fa-hand-holding-heart"></i>Be gentle</span>{% endif %}</div>
+      <p class="mb-1 mt-2">{{ a.message }}</p><div class="small text-muted">{{ a.batch.name if a.batch else "" }} · {{ a.created_at|timeago }}</div></div>
+    <form method="post" action="/staff/insights/{{ a.id }}/resolve">{{ csrf_field() }}<button class="btn btn-soft btn-sm" type="submit">{{ "Reopen" if a.resolved else "Mark handled" }}</button></form></div></div>
+{% endfor %}</div>{% else %}<div class="cn-card">{{ ui.empty("fa-face-smile", "All good!", "No concerns in your batches right now.") }}</div>{% endif %}
+{% endblock %}

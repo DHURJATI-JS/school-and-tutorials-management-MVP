@@ -1,0 +1,37 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Live meetings{% endblock %}
+{% block content %}
+{% call ui.page_header("Live meetings", "In-app video classes with screen sharing, chat, captions, recording and AI notes.", "fa-video") %}
+  <button class="btn btn-primary" type="button" data-modal-open="#instant-modal"><i class="fa-solid fa-bolt me-2"></i>Start instant class</button>
+{% endcall %}
+{% if live %}
+<div class="cn-grid auto mb-4">{% for m in live %}
+  <div class="cn-card" style="border-top: 4px solid #ef4444"><div class="d-flex justify-content-between"><span class="cn-badge live">Live</span><span class="small text-muted">{{ counts.get(m.code, 0) }} connected</span></div>
+    <h3 class="h5 mt-2">{{ m.title }}</h3><div class="small text-muted mb-3">{{ m.batch.name if m.batch else "Parent-teacher meeting" }} · started {{ m.started_at|timeago }}</div>
+    <div class="d-flex gap-2"><a class="btn btn-primary btn-sm" href="/meet/{{ m.code }}">Join</a>
+      <form method="post" action="/admin/meetings/{{ m.id }}/end" data-confirm="End this meeting for everyone?">{{ csrf_field() }}<button class="btn btn-soft-danger btn-sm" type="submit">End</button></form></div></div>{% endfor %}</div>
+{% endif %}
+<div class="cn-grid cols-2">
+  <div class="cn-card flush"><div class="cn-card-head"><h3>Scheduled</h3></div>
+    <ul class="cn-list px-3">{% for m in scheduled %}<li><div class="flex-grow-1 min-w-0"><div class="fw-bold text-truncate">{{ m.title }}</div>
+      <div class="small text-muted">{{ m.batch.name if m.batch else "PTM" }} · {{ m.scheduled_start|dt if m.scheduled_start else "—" }}</div></div>
+      <a class="btn btn-soft btn-sm" href="/meet/{{ m.code }}">Open room</a></li>{% else %}<li class="text-muted small">Nothing scheduled.</li>{% endfor %}</ul></div>
+  <div class="cn-card flush"><div class="cn-card-head"><h3>Recent</h3></div>
+    <ul class="cn-list px-3">{% for m in ended %}<li><div class="flex-grow-1 min-w-0"><a class="fw-bold" href="/admin/meetings/{{ m.id }}">{{ m.title }}</a>
+      <div class="small text-muted">{{ m.batch.name if m.batch else "PTM" }} · {{ m.ended_at|dt }} · {{ m.duration_seconds|duration }}</div></div>
+      {{ ui.status(m.notes_status, "Notes " ~ m.notes_status) }}{% if m.recording_path %}<span class="cn-badge info"><i class="fa-solid fa-circle-play"></i>Recording</span>{% endif %}</li>
+      {% else %}<li class="text-muted small">No meetings yet.</li>{% endfor %}</ul></div>
+</div>
+{% call ui.modal("instant-modal", "Start an instant class") %}
+<form method="post" action="/admin/meetings/new">
+  {{ csrf_field() }}
+  <div class="cn-modal-body">
+    <div class="cn-field"><label class="form-label">Batch</label><select class="form-select" name="batch_id" required><option value="">Select…</option>{% for b in batches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select></div>
+    {{ ui.field("title", "Topic", required=True, placeholder="e.g. Doubt-clearing session") }}
+    <p class="small text-muted mb-0">Students in the batch get a notification with the join link. The class is recorded and summarised by AI.</p>
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit"><i class="fa-solid fa-video me-2"></i>Create & open room</button></div>
+</form>
+{% endcall %}
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ video.title }}{% endblock %}
+{% block content %}
+{% call ui.page_header(video.title, video.batch.name ~ (" · recording of the live class" if video.source == "recording" else " · class video"), "fa-film") %}
+  <a class="btn btn-ghost" href="{{ '/admin/videos' if user.kind == 'admin' else '/staff/batches/' ~ video.batch_id }}" data-back><i class="fa-solid fa-arrow-left me-2"></i>Back</a>
+{% endcall %}
+<div class="cn-grid" style="grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr)">
+  <div>
+    <div class="cn-player">
+      {% if video.file_path %}<video controls playsinline preload="metadata" src="/files/video/{{ video.id }}"></video>
+      {% elif video.external_url %}<video controls playsinline preload="metadata" src="{{ video.external_url }}"></video>{% endif %}
+    </div>
+    {% include "partials/comments.html" %}
+  </div>
+  <div>
+    <div class="cn-card">
+      <div class="cn-card-head"><h3>About this video</h3>{{ ui.status("ready", video.source|capitalize) }}</div>
+      <div class="small text-muted mb-2">{{ video.batch.name }} · added {{ video.created_at|timeago }}{% if video.duration_seconds %} · {{ video.duration_seconds|duration }}{% endif %}</div>
+      {% if video.description %}<div class="small mb-2">{{ video.description|nl2p }}</div>{% endif %}
+      {% if video.notes %}<div class="cn-rich small">{{ video.notes|nl2p }}</div>{% endif %}
+      <div class="cn-callout info mt-3 mb-0"><i class="fa-solid fa-comments"></i><div class="small">Students of the batch comment under the video. You're notified of new questions; reply here, or delete anything that breaks the rules.</div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('js/comments.js') }}" defer></script>{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1 style="margin:0 0 10px;font-size:21px;">{{ "AI insights for your batches" if audience == "teacher" else "Students who need attention" }}</h1>
+{% if name %}<p>Hello {{ name }},</p>{% endif %}
+<p>The daily performance check found the following:</p>
+{% for a in alerts %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-left:4px solid {{ '#d03b3b' if a.level == 'warning' else ('#fab219' if a.level == 'concern' else '#0ca30c') }};border-radius:10px;margin:10px 0;">
+  <tr><td style="padding:12px 14px;"><div style="font-weight:700;">{{ "⛔ Warning" if a.level == "warning" else ("⚠️ Needs attention" if a.level == "concern" else "📈 Improving") }} · {{ a.student }} · {{ a.batch }}</div>
+    <div style="font-size:14px;color:#334155;margin-top:4px;">{{ a.message }}</div></td></tr>
+</table>
+{% endfor %}
+<p style="margin:20px 0;"><a href="{{ settings.BASE_URL }}{{ '/staff/insights' if audience == 'teacher' else '/admin/insights' }}" style="background:#4f46e5;color:#fff;padding:11px 18px;border-radius:10px;text-decoration:none;font-weight:700;">Open AI insights</a></p>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}{{ task.title }}{% endblock %}
+{% block content %}
+{% set open = task.assign_date <= day <= task.due_date %}
+{% call ui.page_header(task.title, task.batch.name ~ " · " ~ ("Test" if task.test_id else C.TASK_KINDS.get(task.kind, task.kind)) ~ " · due " ~ task.due_date|d('%A %d %B'), "fa-file-pen" if task.test_id else "fa-list-check") %}
+  <a class="btn btn-ghost" href="/student/tasks"><i class="fa-solid fa-arrow-left me-2"></i>Tasks</a>
+{% endcall %}
+{% if task.is_holiday_homework %}<div class="cn-callout warning"><i class="fa-solid fa-umbrella-beach"></i><div>Holiday homework — take your time and enjoy your break too! 🏖️</div></div>{% endif %}
+<div class="cn-grid" style="grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr)">
+  <div class="cn-card">
+    {% if task.description %}<div class="cn-rich">{{ task.description|nl2p }}</div>{% else %}<p class="text-muted mb-0">No extra instructions.</p>{% endif %}
+    {% if task.attachment_path %}<a class="btn btn-soft mt-3" href="/files/task/{{ task.id }}" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip me-2"></i>Open attachment</a>{% endif %}
+  </div>
+  <div class="cn-card">
+    {% if task.test_id %}
+      {% if attempt and attempt.status == "in_progress" %}
+        <h3 class="h6">You have a test in progress</h3><a class="btn btn-primary w-100" href="/student/attempts/{{ attempt.id }}">Continue test</a>
+      {% elif attempt %}
+        <h3 class="h6">Submitted ✅</h3><p class="small text-muted">{{ attempt.submitted_at|dt }}</p><a class="btn btn-soft w-100" href="/student/attempts/{{ attempt.id }}">See result</a>
+      {% elif open %}
+        <h3 class="h6">Ready when you are</h3>
+        <p class="small text-muted">{{ task.test.duration_minutes }} minutes · {{ task.test.total_marks|num }} marks. The timer starts as soon as you begin and your answers are saved automatically.</p>
+        <form method="post" action="/student/tests/{{ task.test_id }}/start" data-confirm="Start the test now? The {{ task.test.duration_minutes }}-minute timer begins immediately." data-confirm-tone="primary" data-confirm-ok="Start test">
+          {{ csrf_field() }}<button class="btn btn-primary w-100" type="submit"><i class="fa-solid fa-play me-2"></i>Start test</button></form>
+      {% elif day < task.assign_date %}<p class="mb-0">This test opens on <strong>{{ task.assign_date|d('%A %d %B') }}</strong>.</p>
+      {% else %}<p class="mb-0 text-danger">The deadline has passed.</p>{% endif %}
+    {% else %}
+      {% if sub and sub.status == "graded" %}
+        <h3 class="h6">Graded ✅</h3><div class="h3">{{ sub.marks|num if sub.marks is not none else "—" }}{% if task.max_marks %} / {{ task.max_marks|num }}{% endif %}</div>
+        {% if sub.feedback %}<div class="cn-callout success"><i class="fa-solid fa-comment"></i><div>{{ sub.feedback }}</div></div>{% endif %}
+      {% elif day < task.assign_date %}<p class="mb-0">This task opens on <strong>{{ task.assign_date|d('%A %d %B') }}</strong>.</p>
+      {% else %}
+        {% if sub %}<div class="cn-callout success"><i class="fa-solid fa-circle-check"></i><div class="small">Submitted {{ sub.submitted_at|timeago }}{% if sub.is_late %} (late){% endif %}. You can update it until it's graded.</div></div>{% endif %}
+        {% if day > task.due_date %}<div class="cn-callout warning"><i class="fa-solid fa-clock"></i><div class="small">The deadline has passed — your submission will be marked late.</div></div>{% endif %}
+        <form method="post" action="/student/tasks/{{ task.id }}/submit" enctype="multipart/form-data">
+          {{ csrf_field() }}
+          {{ ui.textarea("text", "Your answer", value=sub.text if sub else "", rows=6) }}
+          <div class="cn-field"><label class="form-label">Attach a file (optional)</label><input class="form-control" type="file" name="file"></div>
+          <button class="btn btn-primary w-100" type="submit" data-loading="Submitting…"><i class="fa-solid fa-paper-plane me-2"></i>{{ "Update submission" if sub else "Submit" }}</button>
+        </form>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

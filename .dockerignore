@@ -1,0 +1,36 @@
+# Keep secrets, personal data and local state out of the app image (the Dockerfile only copies
+# requirements.txt, app/ and run.py, but the build context is sent to Docker in full).
+.git
+.env
+.env.*
+!.env.example
+certs
+*.pem
+*.key
+uploads
+exports
+backups
+*.csv
+*.dump
+words.json
+wordlists*.json
+.venv
+.venv-*
+venv
+# not needed in the image (README images, load-test tooling and raw results)
+docs
+loadtest
+results
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+app/static/dist
+hf-cache
+models
+*.safetensors
+*.gguf
+*.log
+.vscode
+.idea

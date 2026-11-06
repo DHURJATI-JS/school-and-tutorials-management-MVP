@@ -1,0 +1,36 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Parent-teacher meetings{% endblock %}
+{% block content %}
+{% call ui.page_header("Parent-teacher meetings", "Formal invitations with RSVP tracking and an in-app video room for online PTMs.", "fa-people-roof") %}
+  <button class="btn btn-primary" type="button" data-modal-open="#ptm-modal"><i class="fa-solid fa-plus me-2"></i>Schedule PTM</button>
+{% endcall %}
+{% if ptms %}
+<div class="cn-grid auto">{% for p in ptms %}{% set c = counts.get(p.id, {}) %}
+  <a class="cn-card d-block" href="/admin/ptm/{{ p.id }}" style="color:inherit">
+    <div class="d-flex justify-content-between align-items-start"><h3 class="h5 mb-1">{{ p.title }}</h3>{{ ui.status(p.status) }}</div>
+    <div class="small text-muted mb-3">{{ p.scheduled_at|dt('%a %d %b %Y, %I:%M %p') }} · {{ p.duration_minutes }} min · {{ {"online": "Online", "in_person": "In person", "hybrid": "Hybrid"}[p.mode] }}</div>
+    <div class="d-flex gap-2 flex-wrap small"><span class="cn-badge success">✓ {{ c.get('yes', 0) }} attending</span><span class="cn-badge warning">? {{ c.get('maybe', 0) }} maybe</span>
+      <span class="cn-badge danger">✗ {{ c.get('no', 0) }}</span><span class="cn-badge neutral">{{ c.get('pending', 0) }} pending</span></div>
+  </a>{% endfor %}</div>
+{% else %}<div class="cn-card">{{ ui.empty("fa-people-roof", "No PTMs yet", "Invite the parents of one or more batches — they RSVP from the email, no login needed.") }}</div>{% endif %}
+{% call ui.modal("ptm-modal", "Schedule a parent-teacher meeting", "lg") %}
+<form method="post" action="/admin/ptm/new">
+  {{ csrf_field() }}
+  <div class="cn-modal-body cn-form-grid">
+    {{ ui.field("title", "Title", required=True, cls="span-2", value="Parent-Teacher Meeting — Term 1") }}
+    {{ ui.field("date", "Date", type="date", required=True, attrs="data-dayinfo") }}
+    {{ ui.field("time", "Time", type="time", value="10:00", required=True) }}
+    {{ ui.field("duration_minutes", "Duration (minutes)", type="number", value="60") }}
+    {{ ui.select("mode", "Mode", [("online", "Online (in-app video room)"), ("in_person", "In person"), ("hybrid", "Hybrid")]) }}
+    {{ ui.field("location", "Venue (in person / hybrid)", cls="span-2") }}
+    <div class="cn-field span-2"><label class="form-label">Invite parents of <span class="text-danger">*</span></label><div class="d-flex flex-wrap gap-2">
+      {% for b in batches %}<label class="cn-chip"><input class="form-check-input me-1" type="checkbox" name="batch_ids" value="{{ b.id }}">{{ b.name }}</label>{% endfor %}</div></div>
+    {{ ui.textarea("agenda", "Agenda", rows=3, cls="span-2", value="1. Academic progress\n2. Attendance\n3. Upcoming tests and holiday homework\n4. Questions from parents") }}
+    {{ ui.check("include_staff", "Invite the batch teachers, principal & coordinators", checked=True, cls="span-2") }}
+    {{ ui.check("include_students", "Invite the students too", cls="span-2") }}
+  </div>
+  <div class="cn-modal-foot"><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit" data-loading="Sending invitations…"><i class="fa-solid fa-paper-plane me-2"></i>Schedule & invite</button></div>
+</form>
+{% endcall %}
+{% endblock %}

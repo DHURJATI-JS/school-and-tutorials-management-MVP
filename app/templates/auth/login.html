@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block body %}
+<div class="cn-auth">
+  <aside class="cn-auth-art">
+    <a class="cn-brand text-white p-0" href="/">
+      {% if site.logo_url %}<img src="{{ site.logo_url }}" alt="">{% else %}<span class="cn-logo-mark" style="background:rgba(255,255,255,.18)"><i class="fa-solid fa-feather-pointed"></i></span>{% endif %}
+      <span>{{ site.site_name }}</span></a>
+    <div style="position:relative;z-index:1">
+      <h2>Welcome back 👋</h2>
+      <p class="lead opacity-90">Classes, tests, notes and doubts — in one place, powered by your institute's private AI.</p>
+      <ul class="list-unstyled mt-4">
+        <li><i class="fa-solid fa-id-card me-2"></i>Scan your ID card and confirm with a one-time code</li>
+        <li><i class="fa-solid fa-shield-halved me-2"></i>Passwords are encrypted with bcrypt</li>
+        <li><i class="fa-solid fa-wand-magic-sparkles me-2"></i>AI notes, doubt solving and tests</li>
+      </ul>
+    </div>
+    <div class="small opacity-75" style="position:relative;z-index:1">Student-grade project · <a class="text-white text-decoration-underline" href="/p/terms">Terms & Conditions</a></div>
+  </aside>
+  <section class="cn-auth-form">
+    <div class="cn-auth-box">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div><h1 class="h3 m-0">Sign in</h1><p class="text-muted mb-0 small">Choose how you'd like to sign in</p></div>
+        <button class="cn-icon-btn" type="button" data-theme-toggle aria-label="Toggle light / dark mode"><i class="fa-solid fa-moon"></i></button>
+      </div>
+      {% if account_notice %}{% set n = account_notice %}
+      <div class="cn-callout danger cn-account-notice" role="alert">
+        <i class="fa-solid {{ 'fa-ban' if n.kind == 'banned' else 'fa-trash-can' if n.kind == 'deleted' else 'fa-user-slash' }}"></i>
+        <div><strong>{{ n.title }}.</strong>
+          {% if n.kind == "banned" %}You can't use {{ site.site_name }} while the ban is in place.
+          {% elif n.kind == "deleted" %}{% if n.until %}Its data is kept until {{ n.until }} and can still be restored until then.{% endif %}
+          {% else %}Your access has been withdrawn.{% endif %}
+          {% if n.reason %}<div class="mt-1"><span class="fw-semibold">Reason:</span> {{ n.reason }}</div>{% endif %}
+          <div class="mt-2">Please contact the administrator at <a class="fw-bold" href="mailto:{{ n.email }}">{{ n.email }}</a>.</div></div>
+      </div>
+      {% endif %}
+      <div class="cn-tabset">
+        <div class="cn-tabs mb-4" data-tabs data-default="{{ tab }}">
+          <button type="button" data-tab="member"><i class="fa-solid fa-user me-1"></i>Student / Staff</button>
+          <button type="button" data-tab="card"><i class="fa-solid fa-id-card me-1"></i>ID card</button>
+          <button type="button" data-tab="admin"><i class="fa-solid fa-user-shield me-1"></i>Admin</button>
+        </div>
+
+        <div class="cn-tab-panel" id="member">
+          <form method="post" action="/login" class="cn-card">
+            {{ csrf_field() }}<input type="hidden" name="next" value="{{ next }}">
+            <div class="cn-field"><label class="form-label" for="identifier">Username, email or ID number</label>
+              <input class="form-control" id="identifier" name="identifier" required autocomplete="username" autofocus placeholder="e.g. aarav.sharma or STU-000012"></div>
+            <div class="cn-field"><label class="form-label" for="password">Password</label>
+              <input class="form-control" id="password" name="password" type="password" required autocomplete="current-password"></div>
+            <button class="btn btn-primary w-100" type="submit" data-loading="Signing in…"><i class="fa-solid fa-right-to-bracket me-2"></i>Sign in</button>
+            <p class="small text-muted mt-3 mb-0">Forgot your password? Ask the office to reset it — a new one will be emailed to you.</p>
+          </form>
+        </div>
+
+        <div class="cn-tab-panel" id="card">
+          <form method="post" action="/login/id-card" enctype="multipart/form-data" class="cn-card">
+            {{ csrf_field() }}<input type="hidden" name="next" value="{{ next }}">
+            <div class="cn-camera mb-3" style="aspect-ratio:16/10;display:grid;place-items:center;background:var(--cn-surface-3)">
+              <img id="card-preview" alt="Your ID card" hidden>
+              <div class="text-center text-muted p-3" id="card-hint"><i class="fa-solid fa-id-card fa-2x mb-2"></i><div class="small">Upload or snap a photo of your virtual ID card</div></div>
+            </div>
+            <div class="d-flex gap-2 mb-3">
+              <label class="btn btn-ghost flex-fill mb-0"><i class="fa-solid fa-upload me-2"></i>Upload image
+                <input class="d-none" type="file" id="card-input" name="card" accept="image/*" data-preview="#card-preview"></label>
+              <button class="btn btn-soft flex-fill" type="button" data-camera-for="#card-input" data-facing="environment"><i class="fa-solid fa-camera me-2"></i>Use camera</button>
+            </div>
+            <button class="btn btn-primary w-100" type="submit" data-loading="Reading your card…"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Scan & send code</button>
+            <p class="small text-muted mt-3 mb-0">Tesseract OCR reads your ID number, then a one-time code is sent to your registered email and phone.</p>
+          </form>
+        </div>
+
+        <div class="cn-tab-panel" id="admin">
+          <form method="post" action="/login/admin" class="cn-card">
+            {{ csrf_field() }}<input type="hidden" name="next" value="{{ next if next.startswith('/admin') else '/admin' }}">
+            <div class="cn-field"><label class="form-label" for="a-user">Admin username</label>
+              <input class="form-control" id="a-user" name="username" required autocomplete="username"></div>
+            <div class="cn-field"><label class="form-label" for="a-pass">Password</label>
+              <input class="form-control" id="a-pass" name="password" type="password" required autocomplete="current-password"></div>
+            <button class="btn btn-primary w-100" type="submit" data-loading="Signing in…"><i class="fa-solid fa-user-shield me-2"></i>Sign in as admin</button>
+          </form>
+        </div>
+      </div>
+      <p class="text-center small text-muted mt-4"><a href="/"><i class="fa-solid fa-arrow-left me-1"></i>Back to the website</a></p>
+    </div>
+  </section>
+</div>
+{% endblock %}

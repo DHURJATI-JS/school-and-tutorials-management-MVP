@@ -1,0 +1,48 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Schedule a class{% endblock %}
+{% block content %}
+{% call ui.page_header("Schedule a class", "Choose a pre-recorded video or a live class. Without a video, a live class is mandatory.", "fa-chalkboard-user") %}
+  <a class="btn btn-ghost" href="/admin/lessons"><i class="fa-solid fa-arrow-left me-2"></i>Back</a>
+{% endcall %}
+<form method="post" action="/admin/lessons/new" enctype="multipart/form-data" class="cn-card" style="max-width: 940px">
+  {{ csrf_field() }}
+  <div class="cn-form-grid">
+    <div class="cn-field"><label class="form-label">Batch <span class="text-danger">*</span></label><select class="form-select" name="batch_id" required>
+      <option value="">Select…</option>{% for b in batches %}<option value="{{ b.id }}" {{ 'selected' if b.id == batch }}>{{ b.name }} · {{ b.days_label }} {{ b.time_label }}</option>{% endfor %}</select></div>
+    {{ ui.field("title", "Topic", required=True, placeholder="e.g. Quadratic equations — introduction") }}
+    {{ ui.field("date", "Date", type="date", value=today().isoformat(), required=True, attrs="data-dayinfo") }}
+    <div class="cn-form-grid" style="gap: 0 12px">{{ ui.field("start_time", "Start", type="time") }}{{ ui.field("end_time", "End", type="time") }}</div>
+    {{ ui.textarea("description", "Description (optional)", rows=2, cls="span-2") }}
+  </div>
+  <fieldset class="cn-fieldset"><legend>How will this class be delivered?</legend>
+    <div class="cn-tabset">
+      <div class="cn-tabs mb-3" data-tabs>
+        <button type="button" data-tab="mode-live">🔴 Live class</button>
+        <button type="button" data-tab="mode-video">▶️ Pre-recorded video</button>
+      </div>
+      <div class="cn-tab-panel" id="mode-live">
+        <div class="cn-callout info"><i class="fa-solid fa-video"></i><div class="small">A Google-Meet-style room is created for the batch teacher. It is recorded, transcribed for AI notes and attendance is marked automatically. Admins get an email reminder if it isn't started on time.</div></div>
+      </div>
+      <div class="cn-tab-panel" id="mode-video">
+        <div class="cn-form-grid">
+          <div class="cn-field span-2"><label class="form-label">Use a video from the library</label><select class="form-select" name="video_id"><option value="">— Upload a new video below —</option>
+            {% for v in videos %}<option value="{{ v.id }}">{{ v.title }} (batch #{{ v.batch_id }})</option>{% endfor %}</select></div>
+          <div class="cn-field span-2"><label class="form-label">…or upload a new video</label>
+            <input class="form-control" type="file" name="video_file" accept="video/mp4,video/webm,video/quicktime" data-duration-into="#duration"></div>
+          {{ ui.field("external_url", "…or a direct https:// link to an MP4", placeholder="https://…/lesson.mp4", cls="span-2") }}
+          {{ ui.textarea("notes", "Lesson notes for the AI doubt solver", rows=3, cls="span-2", help="Indexed into the knowledge base so students can ask questions about this video.") }}
+          <input type="hidden" name="duration_seconds" id="duration">
+        </div>
+      </div>
+    </div>
+    <input type="hidden" name="mode" id="mode-input" value="live">
+  </fieldset>
+  <div class="text-end"><button class="btn btn-primary" type="submit" data-loading="Scheduling…"><i class="fa-solid fa-calendar-check me-2"></i>Schedule class</button></div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+document.addEventListener("cn:tab", function (e) { var m = document.getElementById("mode-input"); if (m && (e.detail === "mode-live" || e.detail === "mode-video")) m.value = e.detail === "mode-video" ? "video" : "live"; });
+</script>
+{% endblock %}

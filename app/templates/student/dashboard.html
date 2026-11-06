@@ -1,0 +1,49 @@
+{% extends "layouts/app.html" %}
+{% import "partials/macros.html" as ui %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+{% set hour = now().hour %}
+{% call ui.page_header("Hi " ~ user.name.split()[0] ~ "! " ~ ("☀️" if hour < 12 else "🌤️" if hour < 17 else "🌙"), "Here's your day at " ~ site.site_name ~ ".", None) %}
+  <a class="btn btn-ghost" href="/student/calendar"><i class="fa-solid fa-calendar-days me-2"></i>Calendar</a>
+  <a class="btn btn-primary" href="/student/tutor"><i class="fa-solid fa-robot me-2"></i>Ask the AI tutor</a>
+{% endcall %}
+{% for m in live %}
+<div class="cn-callout danger" style="background: linear-gradient(90deg, rgba(239,68,68,.14), transparent)"><span class="cn-badge live">Live</span>
+  <div class="flex-grow-1"><strong>{{ m.title }}</strong> is live now in {{ m.batch.name }}.</div><a class="btn btn-danger btn-sm" href="/meet/{{ m.code }}">Join class</a></div>
+{% endfor %}
+{% set present = attendance.get("present", 0) %}{% set total = present + attendance.get("absent", 0) %}
+<div class="cn-grid cols-4 mb-4">
+  {{ ui.stat("Classes today", lessons|length, "fa-chalkboard-user", "primary", href="/student/classes") }}
+  {{ ui.stat("Open tasks", tasks|rejectattr("id", "in", submitted)|list|length, "fa-list-check", "warning", href="/student/tasks") }}
+  {{ ui.stat("Attendance", ((present * 100 / total)|round|int ~ "%") if total else "—", "fa-user-check", "success", hint=present ~ " of " ~ total ~ " classes") }}
+  {{ ui.stat("Fees due", fees_due|money, "fa-indian-rupee-sign", "danger" if fees_due else "success", href="/student/fees") }}
+</div>
+<div class="cn-grid cols-2">
+  <div class="cn-card">
+    <div class="cn-card-head"><h3>Today's classes</h3><a class="btn btn-ghost btn-sm" href="/student/classes">All</a></div>
+    <ul class="cn-list">{% for l in lessons %}<li><span class="cn-color-dot" style="background:{{ l.batch.color }}"></span>
+      <div class="flex-grow-1 min-w-0"><a class="fw-bold" href="/student/lessons/{{ l.id }}">{{ l.title }}</a><div class="small text-muted">{{ l.batch.name }} · {{ l.start_time|t }}</div></div>
+      {% if l.video %}<span class="cn-badge success">▶ Video</span>{% elif l.meeting and l.meeting.status == "live" %}<a class="btn btn-danger btn-sm" href="/meet/{{ l.meeting.code }}">Join</a>{% else %}<span class="cn-badge info">Live class</span>{% endif %}</li>
+      {% else %}<li class="text-muted small">No classes today — enjoy! 🎈</li>{% endfor %}</ul>
+  </div>
+  <div class="cn-card">
+    <div class="cn-card-head"><h3>Due soon</h3><a class="btn btn-ghost btn-sm" href="/student/tasks">All tasks</a></div>
+    <ul class="cn-list">{% for t in tasks %}{% set done = t.id in submitted or (t.test_id and t.test_id in attempted) %}
+      <li><span class="cn-head-icon" style="width:36px;height:36px"><i class="fa-solid {{ 'fa-file-pen' if t.kind == 'test' else 'fa-list-check' }}"></i></span>
+        <div class="flex-grow-1 min-w-0"><a class="fw-bold" href="/student/tasks/{{ t.id }}">{{ t.title }}</a><div class="small text-muted">{{ t.batch.name }} · due {{ t.due_date|d('%a %d %b') }}</div></div>
+        {{ ui.status("completed" if done else "pending", "Done" if done else "To do") }}</li>
+      {% else %}<li class="text-muted small">Nothing due right now ✨</li>{% endfor %}</ul>
+  </div>
+  <div class="cn-card">
+    <div class="cn-card-head"><h3>Recent results</h3></div>
+    <ul class="cn-list">{% for a in results %}<li><div class="flex-grow-1"><a class="fw-bold" href="/student/attempts/{{ a.id }}">{{ a.test.title }}</a><div class="small text-muted">{{ a.submitted_at|d }}</div></div>
+      <span class="fw-bold tabular">{{ a.percent }}%</span></li>{% else %}<li class="text-muted small">No results yet.</li>{% endfor %}</ul>
+  </div>
+  <div class="cn-card">
+    <div class="cn-card-head"><h3>Notifications</h3><a class="btn btn-ghost btn-sm" href="/notifications">All</a></div>
+    <ul class="cn-list">{% for n in notifications %}<li class="align-items-start"><i class="fa-solid {{ n.icon }} mt-1" style="color: var(--cn-primary)"></i>
+      <div class="flex-grow-1 min-w-0">{% if n.link %}<a class="fw-semibold" href="{{ n.link }}">{{ n.title }}</a>{% else %}<span class="fw-semibold">{{ n.title }}</span>{% endif %}
+        <div class="small text-muted">{{ n.body or "" }} · {{ n.created_at|timeago }}</div></div></li>{% else %}<li class="text-muted small">You're all caught up.</li>{% endfor %}</ul>
+  </div>
+</div>
+{% endblock %}

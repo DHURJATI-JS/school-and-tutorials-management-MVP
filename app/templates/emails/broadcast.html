@@ -1,0 +1,5 @@
+{% extends "emails/base.html" %}
+{% block content %}
+{% for para in body.split("\n\n") %}<p>{{ para|replace("\n", " ") }}</p>{% endfor %}
+{% if sender %}<p style="margin-top:22px;">Regards,<br><strong>{{ sender }}</strong><br>{{ site.site_name }}</p>{% endif %}
+{% endblock %}
