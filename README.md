@@ -29,11 +29,17 @@
 </div>
 
 > [!WARNING]
-> **Student-grade project.** ClassNest is a learning / demonstration project provided **“as is”, without any warranty**.
-> The author is **not responsible** for any loss, damage, data breach, financial or academic consequence arising from its use.
+> **Student-grade project. Use at your own risk.** ClassNest is a learning / demonstration project built by a student.
+> It is provided **“as is”, without any warranty** of any kind, and it has **not** been professionally audited.
+>
+> **No one is liable for any damages caused by this app**: not the author, not the developers, not the contributors,
+> not anyone. That includes data loss, data breaches, financial loss, wrong grades or attendance, AI mistakes or any
+> other harm, however it is caused.
+>
 > Have it reviewed by professionals before using it with real children's data or money. The code is released under the
-> [MIT License](LICENSE); the full disclaimer is also on the app's built-in **Terms & Conditions** page (`/p/terms`),
-> which cannot be deleted from the admin panel.
+> [MIT License](LICENSE); the full disclaimer is in [DISCLAIMER.md](DISCLAIMER.md) and on the app's built-in
+> **Terms & Conditions** page (`/p/terms`), which cannot be deleted from the admin panel.
+> For licensing questions, or a separate licence with different terms, contact the author: [DHURJATI-JS](https://github.com/DHURJATI-JS).
 
 ---
 
@@ -961,6 +967,7 @@ docker compose --profile llm-nvidia stop llm-nvidia      # free the GPU (run.py 
 
 **🪶 ClassNest** — made with ❤️ as a student-grade project
 <br/>
-[MIT License](LICENSE) · provided “as is”, without warranty · questions and bugs: open an issue on this repository
+[MIT License](LICENSE) · [Disclaimer](DISCLAIMER.md) · provided “as is”, without warranty · no one is liable for any damages<br/>
+author: [DHURJATI-JS](https://github.com/DHURJATI-JS) · questions and bugs: open an issue on this repository
 
 </div>

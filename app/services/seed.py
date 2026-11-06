@@ -87,7 +87,8 @@ def terms_html() -> str:
 <p><strong>This software is a student-grade project built for learning and demonstration purposes only.</strong>
 It is provided “AS IS” and “AS AVAILABLE”, without warranties of any kind, express or implied, including but not
 limited to merchantability, fitness for a particular purpose, accuracy, security or uninterrupted availability.</p>
-<p><strong>The author / developer is NOT responsible or liable</strong> for any loss or damage of any kind —
+<p><strong>No one is responsible or liable</strong> (not the author, not the developers, not the contributors,
+not anyone) for any loss or damage of any kind —
 including data loss, data breaches, privacy issues, financial loss (including fee or salary records), missed or
 interrupted classes, incorrect grades or attendance, AI-generated mistakes, account bans, or any other consequence —
 arising from the use of, or inability to use, this application. You use it entirely at your own risk. Have it
